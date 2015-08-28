@@ -1,0 +1,15 @@
+/activator*
+logs
+target
+/.idea
+/.idea_modules
+/*.iml
+/.cache
+/.classpath
+/.project
+/.settings
+/RUNNING_PID
+conf/development.conf
+/bin
+/lib
+*~
