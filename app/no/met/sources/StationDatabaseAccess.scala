@@ -23,35 +23,17 @@
     MA 02110-1301, USA
 */
 
-import org.specs2.mutable._
-import org.specs2.runner._
-import org.junit.runner._
+package no.met.sources
 
-import play.api.test._
-import play.api.test.Helpers._
-import TestUtil._
+import play.api._
+import no.met.stinfosys.Station
 
 /**
- * add your integration spec here.
- * An integration test will fire up a whole play application in a real (or headless) browser
+ * Abstract class for StationDatabaseAccess injection - TODO: not working... FIXME
  */
-@RunWith(classOf[JUnitRunner])
-class SourcesIntegrationSpec extends Specification {
+abstract class StationDatabaseAccess {
 
-  // No idea how to integrate this with Testutil... FIXME
-
-  //"sources plugin" should {
-
-    //"get a list of stations" in new WithBrowser {
-      //browser.goTo("http://localhost:" + port + "/v0.jsonld?limit=10")
-      //browser.pageSource must contain("SensorSystem")
-    //}
-
-    //"get a specific station" in new WithBrowser {
-      //browser.goTo("http://localhost:" + port + "/v0.jsonld?sources=KN4200")
-      //browser.pageSource must contain("KJELLER")
-    //}
-
-  //}
+  def getStations(sources: Option[String], types: Option[String], validtime: Option[String], bbox: List[Double],
+      fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station]
 
 }

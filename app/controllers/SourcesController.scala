@@ -28,15 +28,17 @@ package controllers
 import play.api._
 import play.api.mvc._
 import util._
+import javax.inject.Inject
 import com.wordnik.swagger.annotations._
 import javax.ws.rs.{ QueryParam, PathParam }
 import com.github.nscala_time.time.Imports._
+import no.met.sources._
 import no.met.stinfosys._
 import play.api.libs.json._
-import no.met.sources.JsonFormat
+import no.met.sources.{ StationDatabaseAccess, JsonFormat }
 
 @Api(value = "/sources", description = "Access data about sources of meteorological data")
-class SourcesController extends Controller {
+class SourcesController @Inject()(databaseService: StationDatabaseAccess) extends Controller {
   /**
    * GET sources data from stinfosys
    * @sources a list of source IDs that the result should be limited to. If no sources are specified, all sources are returned
@@ -63,6 +65,7 @@ class SourcesController extends Controller {
       @ApiParam(value = "list of source IDs", required = false, allowMultiple = true)@QueryParam("sources") sources: Option[String],
       @ApiParam(value = "list of source types", required = false, allowableValues = "SensorSystem", defaultValue = "SensorSystem")@QueryParam("types") types: Option[String],
       @ApiParam(value = "the validtime of data required", required = false)@QueryParam("validtime") validtime: Option[String],
+      @ApiParam(value = "get only sources located within this WSEN bounding box", required = false)@QueryParam("bbox") bbox: Option[String],
       @ApiParam(value = "limit the data returned in the return format to only these variables or fields", required = false, allowMultiple = true)@QueryParam("fields") fields: Option[String],
       @ApiParam(value = "limit the number of records returned", required = false, defaultValue = "100")@QueryParam("limit") limit: Option[Int],
       @ApiParam(value = "returns from this offset in the result set", required = false)@QueryParam("offset") offset: Option[Int],
@@ -72,21 +75,29 @@ class SourcesController extends Controller {
     implicit request =>
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
-    //if (types == "SensorSystem") {
-      val stinfosys = new StinfosysDatabaseAccess
-      val data = stinfosys.getStations(sources, types, validtime, fields, limit, offset)
-      if (data.isEmpty) {
-        NotFound("Found no data for sources " + sources.getOrElse("<none>"))
+    Try {
+      //if (types == "SensorSystem") { // suggest we default to this and use sourceid prefix to determine type when possible
+
+      val bboxList : List[Double] = bbox match {
+        case Some(bbox) => bbox.split(",").map(_.toDouble).toList // TODO - check that exactly 0 or 4
+        case _ => List.empty
+      }
+      databaseService.getStations(sources, types, validtime, bboxList, fields, limit, offset)
+    } match {
+      case Success(data) =>
+      if (data isEmpty) {
+        NotFound("Found no data for sources " + sources.getOrElse("<all>"))
       } else {
         implicit val sourceFormat = Json.format[Station]
-        //Ok(Json.toJson(data))
         format.toLowerCase() match {
           case "jsonld" => Ok(JsonFormat.format(start, data)) as "application/vnd.no.met.data.sources-v0+json"
           case x        => BadRequest(s"Invalid output format: $x")
         }
       }
-    //} else {
-      //NotFound("Only type SensorSystem currently implemented")
-    //}
+      //} else {
+        //NotFound("Only type SensorSystem currently implemented")
+      //}
+      case Failure(x) => BadRequest(x getLocalizedMessage)
+    }
   }
 }

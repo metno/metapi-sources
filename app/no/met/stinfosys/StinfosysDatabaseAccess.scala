@@ -38,6 +38,7 @@ import anorm.NamedParameter.string
 import anorm.sqlToSimple
 import scala.annotation.tailrec
 import anorm.NamedParameter
+import no.met.sources._
 
 //$COVERAGE-OFF$Not testing database queries
 
@@ -46,33 +47,11 @@ import anorm.NamedParameter
  * database.
  */
 @Singleton
-class StinfosysDatabaseAccess { // extends StinfosysAccess
+class StinfosysDatabaseAccess extends StationDatabaseAccess {
 
-  val getStationsQuery = """
-        SELECT
-       | 'KN'||stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
-       |FROM
-       | station s, country c
-       |WHERE
-       | c.countryid = s.countryid
-       |ORDER BY
-       | stationid
-       |LIMIT {limit} OFFSET {offset}""".stripMargin
+  val defaultLimit: Int = 100; // todo: set in constructor
 
-  val getStationsByIdQuery = """
-        SELECT
-       | 'KN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
-       |FROM
-       | station s, country c
-       |WHERE
-       | 'KN'||stationid IN ({stations})
-       | AND c.countryid = s.countryid
-       |ORDER BY
-       | stationid""".stripMargin
-
-  val defaultLimit: Int = current.configuration.getString("db.stinfosys.defaultlimit").getOrElse("100").toInt
-
-  def getStations(sources: Option[String], types: Option[String], validtime: Option[String],
+  def getStations(sources: Option[String], types: Option[String], validtime: Option[String], bbox: List[Double],
       fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station] = {
 
     DB.withConnection("stinfosys") { implicit conn =>
@@ -80,10 +59,45 @@ class StinfosysDatabaseAccess { // extends StinfosysAccess
       val _limit: NamedParameter = "limit" -> limit.getOrElse(defaultLimit)
       val _offset: NamedParameter = "offset" -> offset.getOrElse(0)
       // can't get Seq[NamedParameter] to work inside .on()
+
+      val latlonclause = if (bbox.length > 0) {
+          s" AND (lon BETWEEN ${bbox(0)} AND ${bbox(2)}) AND (lat BETWEEN ${bbox(1)} AND ${bbox(3)}) "
+        } else {
+          ""
+        }
+
+      val getStationsQuery = s"""
+            SELECT
+           | 'KN'||stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
+           |FROM
+           | station s, country c
+           |WHERE
+           | c.countryid = s.countryid
+           | AND s.totime is null
+           | ${latlonclause}
+           |ORDER BY
+           | stationid
+           |LIMIT {limit} OFFSET {offset}""".stripMargin
+
+      val getStationsByIdQuery = s"""
+            SELECT
+           | 'KN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
+           |FROM
+           | station s, country c
+           |WHERE
+           | 'KN'||stationid IN ({stations})
+           | AND c.countryid = s.countryid
+           | AND s.totime is null
+           | ${latlonclause}
+           |ORDER BY
+           | stationid""".stripMargin
+
+      Logger.debug(getStationsQuery)
+
       val result = sources match {
-        case Some("") => SQL(getStationsQuery).on(_limit, _offset)() // combine with None - FIXME
+        case Some("") => SQL(getStationsQuery).on(_limit, _offset)() // combine with None - FIXME (what?)
         case Some(ids) => {
-          val idList = ids.split(",").map(_.trim).toList
+          val idList = ids.split(",").map(_.trim).toList // TODO - move to controller
           Logger.debug(idList.mkString(" "))
           SQL(getStationsByIdQuery).on( "stations" -> idList )() }
         case None  => SQL(getStationsQuery).on(_limit, _offset)()

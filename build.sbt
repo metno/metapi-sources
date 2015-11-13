@@ -1,12 +1,41 @@
 name := """sources"""
 
-version := "2.0-SNAPSHOT"
+organization := "no.met.data"
+
+version := "0.2-SNAPSHOT"
+
+publishTo := {
+  val nexus = "http://maven.met.no/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.6"
 
-//PlayKeys.devSettings += ("play.http.router", "sources.Routes")
+PlayKeys.devSettings += ("play.http.router", "sources.Routes")
+
+// Test Settings
+javaOptions += "-Djunit.outdir=target/test-report"
+
+ScoverageSbtPlugin.ScoverageKeys.coverageHighlighting := true
+
+ScoverageSbtPlugin.ScoverageKeys.coverageMinimum := 95
+
+ScoverageSbtPlugin.ScoverageKeys.coverageFailOnMinimum := true
+
+ScoverageSbtPlugin.ScoverageKeys.coverageExcludedPackages := """
+  <empty>;
+  value.ApiResponse;
+  ReverseApplication;
+  ReverseAssets;
+  sources.*;
+"""
+
+
 
 // Dependencies
 libraryDependencies ++= Seq(

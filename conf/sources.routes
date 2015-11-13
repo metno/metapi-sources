@@ -1,0 +1,8 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# MET API
+GET     /v0.:format                 controllers.SourcesController.getSources(sources: Option[String], types: Option[String], validtime: Option[String], bbox: Option[String], fields: Option[String], limit: Option[Int], offset: Option[Int], namespace: Option[String], format: String)
+
+GET     /api-docs                   pl.matisoft.swagger.ApiHelpController.getResource(path = "/sources")
