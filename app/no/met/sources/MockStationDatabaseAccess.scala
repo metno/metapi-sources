@@ -60,17 +60,12 @@ class MockStationDatabaseAccess extends StationDatabaseAccess {
 
   val defaultLimit: Int = 100 // todo: set in constructor
 
-  def getStations(sources: Option[String], types: Option[String], validtime: Option[String], bbox: List[Double],
+  def getStations(sources: Array[String], types: Option[String], validtime: Option[String], bbox: Array[Double],
       fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station] = {
 
-    val idList : Array[String] = sources match { // TODO - move to controller
-      case Some(sources) => sources.toLowerCase.split(",")
-      case _ => Array[String]()
-    }
-
     mockSourcelist.
-      filter(s => idList.length == 0 || idList.contains(s.sourceid.toLowerCase)).
-      filter(s => bbox.length == 0   || s.lon.get >= bbox(0) && s.lat.get >= bbox(1) && s.lon.get <= bbox(2) && s.lat.get <= bbox(3))
+      filter(s => sources.length == 0 || sources.contains(s.sourceid.toUpperCase)).
+      filter(s => bbox.length == 0    || s.lon.get >= bbox(0) && s.lat.get >= bbox(1) && s.lon.get <= bbox(2) && s.lat.get <= bbox(3))
 
   }
 

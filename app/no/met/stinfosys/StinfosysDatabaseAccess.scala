@@ -51,7 +51,7 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
 
   val defaultLimit: Int = 100; // todo: set in constructor
 
-  def getStations(sources: Option[String], types: Option[String], validtime: Option[String], bbox: List[Double],
+  def getStations(sources: Array[String], types: Option[String], validtime: Option[String], bbox: Array[Double],
       fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station] = {
 
     DB.withConnection("stinfosys") { implicit conn =>
@@ -61,10 +61,9 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
       // can't get Seq[NamedParameter] to work inside .on()
 
       val latlonclause = if (bbox.length > 0) {
+          // coords have been cast to Double so should be safe from XSS attacks
           s" AND (lon BETWEEN ${bbox(0)} AND ${bbox(2)}) AND (lat BETWEEN ${bbox(1)} AND ${bbox(3)}) "
-        } else {
-          ""
-        }
+        } else { "" }
 
       val getStationsQuery = s"""
             SELECT
@@ -94,14 +93,12 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
 
       Logger.debug(getStationsQuery)
 
-      val result = sources match {
-        case Some("") => SQL(getStationsQuery).on(_limit, _offset)() // combine with None - FIXME (what?)
-        case Some(ids) => {
-          val idList = ids.split(",").map(_.trim).toList // TODO - move to controller
-          Logger.debug(idList.mkString(" "))
-          SQL(getStationsByIdQuery).on( "stations" -> idList )() }
-        case None  => SQL(getStationsQuery).on(_limit, _offset)()
+      val result = if (sources.length > 0) {
+        SQL(getStationsByIdQuery).on( "stations" -> sources.toList )()
+      } else {
+        SQL(getStationsQuery).on(_limit, _offset)()
       }
+
       result.map ( row =>
           Station(
               row[String]("sourceid"),

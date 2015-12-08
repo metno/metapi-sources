@@ -38,7 +38,7 @@ import play.api.libs.json._
 import no.met.sources.{ StationDatabaseAccess, JsonFormat }
 
 @Api(value = "/sources", description = "Access data about sources of meteorological data")
-class SourcesController @Inject()(databaseService: StationDatabaseAccess) extends Controller {
+class SourcesController @Inject()(stationDatabaseService: StationDatabaseAccess) extends Controller {
   /**
    * GET sources data from stinfosys
    * @sources a list of source IDs that the result should be limited to. If no sources are specified, all sources are returned
@@ -78,11 +78,19 @@ class SourcesController @Inject()(databaseService: StationDatabaseAccess) extend
     Try {
       //if (types == "SensorSystem") { // suggest we default to this and use sourceid prefix to determine type when possible
 
-      val bboxList : List[Double] = bbox match {
-        case Some(bbox) => bbox.split(",").map(_.toDouble).toList // TODO - check that exactly 0 or 4
-        case _ => List.empty
+      val bboxList : Array[Double] = bbox match {
+        case Some(bbox) => bbox.split(",").map(_.toDouble) // TODO - check that exactly 0 or 4
+        case _ => Array()
       }
-      databaseService.getStations(sources, types, validtime, bboxList, fields, limit, offset)
+      if (bboxList.length > 0 && bboxList.length != 4) throw new Exception("bbox parameter must contain exactly 4 comma-separated numbers")
+
+      val sourceList : Array[String] = sources match {
+        case Some(sources) => sources.toUpperCase.split(",").map(_.trim)
+        case _ => Array()
+      }
+
+      stationDatabaseService.getStations(sourceList, types, validtime, bboxList, fields, limit, offset)
+
     } match {
       case Success(data) =>
       if (data isEmpty) {

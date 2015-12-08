@@ -29,11 +29,11 @@ import play.api._
 import no.met.stinfosys.Station
 
 /**
- * Abstract class for StationDatabaseAccess injection - TODO: not working... FIXME
+ * Abstract class for StationDatabaseAccess injection
  */
 abstract class StationDatabaseAccess {
 
-  def getStations(sources: Option[String], types: Option[String], validtime: Option[String], bbox: List[Double],
+  def getStations(sources: Array[String], types: Option[String], validtime: Option[String], bbox: Array[Double],
       fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station]
 
 }
