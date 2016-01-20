@@ -12,6 +12,8 @@ publishTo := {
     Some("releases"  at nexus + "service/local/staging/deploy/maven2")
 }
 
+credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
+
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
 scalaVersion := "2.11.6"
