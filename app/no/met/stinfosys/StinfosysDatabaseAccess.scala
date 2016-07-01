@@ -54,7 +54,7 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
   def getStations(sources: Array[String], types: Option[String], validtime: Option[String], bbox: Array[Double],
       fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station] = {
 
-    DB.withConnection("stinfosys") { implicit conn =>
+    DB.withConnection("sources") { implicit conn =>
 
       val _limit: NamedParameter = "limit" -> limit.getOrElse(defaultLimit)
       val _offset: NamedParameter = "offset" -> offset.getOrElse(0)
