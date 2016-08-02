@@ -23,7 +23,7 @@
     MA 02110-1301, USA
 */
 
-package no.met.sources
+package services.sources
 
 import play.api.mvc._
 import play.api.libs.json._
@@ -31,6 +31,7 @@ import com.github.nscala_time.time.Imports._
 import no.met.stinfosys.{ Station, ResponseData }
 import no.met.data.BasicResponseData
 import no.met.data.format.json.BasicJsonFormat
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 /**
  * Creating a json representation of Stations data

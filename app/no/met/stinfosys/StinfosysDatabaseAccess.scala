@@ -28,9 +28,9 @@ package no.met.stinfosys
 import javax.inject.Singleton
 import anorm.SQL
 import play.api.db._
+import play.api.libs.ws._
 import play.api.Play.current
 import play.Logger
-import play.api.libs.ws._
 import scala.concurrent._
 import scala.util._
 import java.sql.Connection
@@ -38,7 +38,7 @@ import anorm.NamedParameter.string
 import anorm.sqlToSimple
 import scala.annotation.tailrec
 import anorm.NamedParameter
-import no.met.sources._
+import services.sources._
 
 //$COVERAGE-OFF$Not testing database queries
 

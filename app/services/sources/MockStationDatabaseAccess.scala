@@ -23,7 +23,7 @@
     MA 02110-1301, USA
 */
 
-package no.met.sources
+package services.sources
 
 import javax.inject.Singleton
 import anorm.SQL

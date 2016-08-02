@@ -27,15 +27,14 @@ package controllers
 
 import play.api._
 import play.api.mvc._
-import util._
+import play.api.libs.json._
+import scala.util._
 import javax.inject.Inject
 import com.wordnik.swagger.annotations._
 import javax.ws.rs.{ QueryParam, PathParam }
 import com.github.nscala_time.time.Imports._
-import no.met.sources._
 import no.met.stinfosys._
-import play.api.libs.json._
-import no.met.sources.{ StationDatabaseAccess, JsonFormat }
+import services.sources.{ StationDatabaseAccess, JsonFormat }
 
 @Api(value = "/sources", description = "Access data about sources of meteorological data")
 class SourcesController @Inject()(stationDatabaseService: StationDatabaseAccess) extends Controller {

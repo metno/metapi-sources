@@ -22,15 +22,15 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
     MA 02110-1301, USA
 */
-package no.met.sources
+package modules.sources
 
 import play.api._
 import play.api.inject.guice._
-import com.google.inject.AbstractModule
-import no.met.stinfosys._
-import no.met.sources._
 import play.api.inject.guice.GuiceableModule.fromGuiceModule
 import play.api.inject.guice._
+import com.google.inject.AbstractModule
+import no.met.stinfosys._
+import services.sources._
 
 /**
  * Configurations for Production Mode

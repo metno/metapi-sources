@@ -27,13 +27,13 @@ import play.api.inject.bind
 import play.api.Application
 import play.api.test.FakeApplication
 import controllers._
-import no.met.sources._
+import modules.sources._
 
 object TestUtil {
 
   private def defaultConfig = {
     Map(("play.http.router" -> "sources.Routes"),
-        ("play.application.loader" -> "no.met.sources.SourcesApplicationLoader"),
+        ("play.application.loader" -> "modules.sources.SourcesApplicationLoader"),
         ("auth.active" -> "false"))
   }
 
