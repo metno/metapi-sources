@@ -43,13 +43,6 @@ class SourcesApplicationSpec extends Specification {
 
   "sources plugin" should {
 
-    "get api-docs" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/api-docs")).get
-      status(response) must equalTo(OK)
-      contentType(response) must beSome.which(_ == "application/json")
-      contentAsString(response) must contain ("Describe sources of metapi data")
-    }
-
     "get a list of stations" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld?limit=10")).get
       contentAsString(response) must contain ("SensorSystem")

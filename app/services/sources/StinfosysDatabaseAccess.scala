@@ -23,22 +23,21 @@
     MA 02110-1301, USA
 */
 
-package no.met.stinfosys
+package services.sources
 
-import javax.inject.Singleton
-import anorm.SQL
+import play.api.Play.current
 import play.api.db._
 import play.api.libs.ws._
-import play.api.Play.current
 import play.Logger
-import scala.concurrent._
-import scala.util._
+import anorm._
+import anorm.SqlParser._
 import java.sql.Connection
-import anorm.NamedParameter.string
-import anorm.sqlToSimple
+import javax.inject.Singleton
 import scala.annotation.tailrec
-import anorm.NamedParameter
-import services.sources._
+import scala.concurrent._
+import scala.language.postfixOps
+import scala.util._
+import no.met.stinfosys._
 
 //$COVERAGE-OFF$Not testing database queries
 
@@ -49,6 +48,19 @@ import services.sources._
 @Singleton
 class StinfosysDatabaseAccess extends StationDatabaseAccess {
 
+  val parser: RowParser[Station] = {
+    get[String]("sourceid") ~
+    get[String]("name") ~
+    get[String]("country") ~
+    get[Option[Int]]("wmono") ~
+    get[Option[Int]]("hs") ~
+    get[Option[Double]]("lat") ~
+    get[Option[Double]]("lon") ~
+    get[String]("fromdate") map {
+      case sourceid~name~country~wmono~hs~lat~lon~fromdate => Station(sourceid, name, country, wmono, hs, lat, lon, fromdate)
+    }
+  }
+  
   val defaultLimit: Int = 100; // todo: set in constructor
 
   def getStations(sources: Array[String], types: Option[String], validtime: Option[String], bbox: Array[Double],
@@ -64,7 +76,7 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
           // coords have been cast to Double so should be safe from XSS attacks
           s" AND (lon BETWEEN ${bbox(0)} AND ${bbox(2)}) AND (lat BETWEEN ${bbox(1)} AND ${bbox(3)}) "
         } else { "" }
-
+      
       val getStationsQuery = s"""
             SELECT
            | 'KN'||stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
@@ -94,23 +106,12 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
       Logger.debug(getStationsQuery)
 
       val result = if (sources.length > 0) {
-        SQL(getStationsByIdQuery).on( "stations" -> sources.toList )()
+        SQL(getStationsByIdQuery).on( "stations" -> sources.toList ).as( parser * )
       } else {
-        SQL(getStationsQuery).on(_limit, _offset)()
+        SQL(getStationsQuery).on(_limit, _offset).as( parser * )
       }
 
-      result.map ( row =>
-          Station(
-              row[String]("sourceid"),
-              row[String]("name"),
-              row[String]("country"),
-              row[Option[Int]]("wmono"),
-              row[Option[Int]]("hs"),
-              row[Option[Double]]("lat"),
-              row[Option[Double]]("lon"),
-              row[String]("fromdate")
-          )
-      ).toList
+      result
 
     }
   }

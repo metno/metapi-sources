@@ -29,7 +29,6 @@ import play.api.inject.guice._
 import play.api.inject.guice.GuiceableModule.fromGuiceModule
 import play.api.inject.guice._
 import com.google.inject.AbstractModule
-import no.met.stinfosys._
 import services.sources._
 
 /**

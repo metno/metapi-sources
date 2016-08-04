@@ -1,6 +1,6 @@
 organization := "no.met.data"
 name := """sources"""
-version := "0.2-SNAPSHOT"
+version := "0.3-SNAPSHOT"
 description := "Sources module of the metapi. Metadata about the source IDs."
 homepage :=  Some(url(s"https://github.com/metno"))
 licenses += "GPL-2.0" -> url("https://www.gnu.org/licenses/gpl-2.0.html")
@@ -24,17 +24,16 @@ libraryDependencies ++= Seq(
   ws,
  "com.typesafe.play" %% "anorm" % "2.4.0",
  "org.postgresql" % "postgresql" % "9.4-1201-jdbc41",
- "com.github.nscala-time" %% "nscala-time" % "2.0.0",
- "pl.matisoft" %% "swagger-play24" % "1.4",
- "no.met.data" %% "util" % "0.2-SNAPSHOT",
- "no.met.data" %% "auth" % "0.2-SNAPSHOT",
+ "com.github.nscala-time" %% "nscala-time" % "2.12.0",
+ "io.swagger" %% "swagger-play2" % "1.5.2",
+ "no.met.data" %% "util" % "0.3-SNAPSHOT",
+ "no.met.data" %% "auth" % "0.3-SNAPSHOT",
   specs2 % Test
 )
 
 resolvers ++= Seq(
   "OJO Artifactory" at "http://oss.jfrog.org/artifactory/oss-snapshot-local",
-  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
-  "amateras-repo" at "http://amateras.sourceforge.jp/mvn/"
+  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 )
 
 // Publish Settings
