@@ -38,7 +38,7 @@ import services.sources.{ SourceAccess, JsonFormat }
 
 // scalastyle:off magic.number
 
-@Api(value = "/sources")
+@Api(value = "sources")
 class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller {
 
   @ApiOperation(

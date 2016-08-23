@@ -57,7 +57,7 @@ case class Source(
   @(ApiModelProperty @field)(value="The name of the source.", example="OSLO - BLINDERN") name: String,
   @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway.") country: String,
   @(ApiModelProperty @field)(value="The assigned WMO number for a SensorSystem, if one exists.", example="1492") wmoNumber: Option[Int],
-  @(ApiModelProperty @field)(value="Spatial location data for the source.") geo: Option[Point],
+  @(ApiModelProperty @field)(value="Spatial location data for the source.") geometry: Option[SPoint],
   @(ApiModelProperty @field)(value="The level of the source.") level: Option[Double],
   @(ApiModelProperty @field)(value="The level unit of the source.") levelUnit: Option[String],
   @(ApiModelProperty @field)(value="The level typeof the source.") levelType: Option[String],
@@ -65,7 +65,7 @@ case class Source(
   @(ApiModelProperty @field)(value="The date to which the source was valid (if no longer valid).") validTo: Option[String]
 )
 
-case class Point(
+case class SPoint(
   @(ApiModelProperty @field)(name="@type", value="The type of the geometry object", example="Point") geomType: String,
   @(ApiModelProperty @field)(value="Coordinates of the geometry object", example="59.9423, 10.72") coordinates: Seq[Double]
 ) { 

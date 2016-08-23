@@ -56,7 +56,7 @@ class StinfosysAccess extends SourceAccess {
     get[Double]("lon") ~
     get[String]("fromdate") ~
     get[Option[String]]("todate") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorSystem", sourceid, name, country, wmono, Some(Point("Point", Array(lat, lon))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
+      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorSystem", sourceid, name, country, wmono, Some(SPoint("Point", Array(lon, lat))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
     }
   }
 
