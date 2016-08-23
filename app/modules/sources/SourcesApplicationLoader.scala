@@ -71,14 +71,9 @@ class SourcesApplicationLoader extends GuiceApplicationLoader() {
       case Mode.Prod =>
         // start mode
         builder.bindings(new SourcesProdModule)
-      case Mode.Test =>
-        // used for unit tests
-        builder.bindings(new SourcesTestModule)
-      case Mode.Dev =>
+      case _ =>
         // run mode
-        // use live DB, but with test data
-        //builder.bindings(new SourcesTestModule)
-        builder.bindings(new SourcesProdModule)
+        builder.bindings(new SourcesTestModule)
     }
   }
 
