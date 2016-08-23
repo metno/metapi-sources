@@ -37,49 +37,45 @@ import scala.annotation.tailrec
 import scala.concurrent._
 import scala.language.postfixOps
 import scala.util._
-import no.met.stinfosys._
+import models._
 
 //$COVERAGE-OFF$Not testing database queries
 
-/**
- * Concrete implementation of StinfosysDatabaseAccess class, connecting to a real stinfosys
- * database.
+/** Concrete implementation of SourceAccess class, connecting to the MET API's STInfoSys clone database.
  */
 @Singleton
-class StinfosysDatabaseAccess extends StationDatabaseAccess {
+class StinfosysAccess extends SourceAccess {
 
-  val parser: RowParser[Station] = {
+  val parser: RowParser[Source] = {
     get[String]("sourceid") ~
     get[String]("name") ~
     get[String]("country") ~
     get[Option[Int]]("wmono") ~
-    get[Option[Int]]("hs") ~
-    get[Option[Double]]("lat") ~
-    get[Option[Double]]("lon") ~
-    get[String]("fromdate") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromdate => Station(sourceid, name, country, wmono, hs, lat, lon, fromdate)
+    get[Option[Double]]("hs") ~
+    get[Double]("lat") ~
+    get[Double]("lon") ~
+    get[String]("fromdate") ~
+    get[Option[String]]("todate") map {
+      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorSystem", sourceid, name, country, wmono, Some(Point("Point", Array(lat, lon))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
     }
   }
-  
-  val defaultLimit: Int = 100; // todo: set in constructor
 
-  def getStations(sources: Array[String], types: Option[String], validtime: Option[String], bbox: Array[Double],
-      fields: Option[String], limit: Option[Int], offset: Option[Int]): List[Station] = {
+  def getStations(ids: Array[String], types: Option[String], bbox: Array[Double], validTime: Option[String], fields: Option[String]): List[Source] = {
 
     DB.withConnection("sources") { implicit conn =>
 
-      val _limit: NamedParameter = "limit" -> limit.getOrElse(defaultLimit)
-      val _offset: NamedParameter = "offset" -> offset.getOrElse(0)
+      //val _limit: NamedParameter = "limit" -> limit.getOrElse(defaultLimit)
+      //val _offset: NamedParameter = "offset" -> offset.getOrElse(0)
       // can't get Seq[NamedParameter] to work inside .on()
 
       val latlonclause = if (bbox.length > 0) {
           // coords have been cast to Double so should be safe from XSS attacks
-          s" AND (lon BETWEEN ${bbox(0)} AND ${bbox(2)}) AND (lat BETWEEN ${bbox(1)} AND ${bbox(3)}) "
+          s"(lon BETWEEN ${bbox(0)} AND ${bbox(2)}) AND (lat BETWEEN ${bbox(1)} AND ${bbox(3)}) "
         } else { "" }
       
       val getStationsQuery = s"""
             SELECT
-           | 'KN'||stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
+           | 'SN'||stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
            |FROM
            | station s, country c
            |WHERE
@@ -92,23 +88,23 @@ class StinfosysDatabaseAccess extends StationDatabaseAccess {
 
       val getStationsByIdQuery = s"""
             SELECT
-           | 'KN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate
+           | 'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
            |FROM
            | station s, country c
            |WHERE
            | 'KN'||stationid IN ({stations})
            | AND c.countryid = s.countryid
            | AND s.totime is null
-           | ${latlonclause}
+           | AND ${latlonclause}
            |ORDER BY
            | stationid""".stripMargin
 
       Logger.debug(getStationsQuery)
 
-      val result = if (sources.length > 0) {
-        SQL(getStationsByIdQuery).on( "stations" -> sources.toList ).as( parser * )
+      val result = if (ids.length > 0) {
+        SQL(getStationsByIdQuery).on( "stations" -> ids.toList ).as( parser * )
       } else {
-        SQL(getStationsQuery).on(_limit, _offset).as( parser * )
+        SQL(getStationsQuery).as( parser * )
       }
 
       result

@@ -27,83 +27,89 @@ package controllers
 
 import play.api._
 import play.api.mvc._
-import play.api.libs.json._
+import play.api.http.Status._
 import com.github.nscala_time.time.Imports._
 import javax.inject.Inject
 import io.swagger.annotations._
 import scala.language.postfixOps
-import scala.util._
-import no.met.stinfosys._
-import services.sources.{ StationDatabaseAccess, JsonFormat }
+import util._
+import models.Source
+import services.sources.{ SourceAccess, JsonFormat }
 
-@Api(value = "/sources", description = "Access data about sources of meteorological data")
-class SourcesController @Inject()(stationDatabaseService: StationDatabaseAccess) extends Controller {
-  /**
-   * GET sources data from stinfosys
-   * @sources a list of source IDs that the result should be limited to. If no sources are specified, all sources are returned
-   * @types a list of source types that the result should be limited to
-   * @validtime the validtime of data required. ISO-8601
-   * @fields limit the data returned in the return format to only these variables or fields
-   * @limit limit the number of answers. Default (and maximum) depends on user
-   * @offset returns from this offset in the result set. Need to consider how this is implemented in real-time, distributed data set
-   * @namespace sets the namespace used in the query and the return set
-   */
+// scalastyle:off magic.number
+
+@Api(value = "/sources")
+class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller {
+
   @ApiOperation(
-    nickname = "getSources",
-    value = "Describe sources of metapi data (observation stations, models etc.)",
-    response = classOf[String],
+    value = "Get metada for MET API sources.",
+    notes = "Get metadata for the source entitites defined in the MET API. Use the query parameters to filter the set of sources returned. Leave the query parameters blank to select **all** sources.",
+    response = classOf[models.SourceResponse],
     httpMethod = "GET")
   @ApiResponses(Array(
-    new ApiResponse(code = 200, message = "The request was successfully completed"),
-    new ApiResponse(code = 400, message = "An error in the request"),
-    new ApiResponse(code = 401, message = "The authentication credentials included with this request are missing or invalid"),
-    new ApiResponse(code = 404, message = "No data was found for the specified ID"),
-    new ApiResponse(code = 500, message = "The service encountered an unexpected server-side condition which prevented it from fulfilling the request")))
+    new ApiResponse(code = 400, message = "Invalid parameter value or malformed request."),
+    new ApiResponse(code = 401, message = "Unauthorized client ID."),
+    new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
+    new ApiResponse(code = 500, message = "Internal server error.")))
   def getSources( // scalastyle:ignore public.methods.have.type
-      @ApiParam(value = "list of source IDs", required = false, allowMultiple = true) sources: Option[String],
-      @ApiParam(value = "list of source types", required = false, allowableValues = "SensorSystem", defaultValue = "SensorSystem") types: Option[String],
-      @ApiParam(value = "the validtime of data required", required = false) validtime: Option[String],
-      @ApiParam(value = "get only sources located within this WSEN bounding box", required = false) bbox: Option[String],
-      @ApiParam(value = "limit the data returned in the return format to only these variables or fields", required = false, allowMultiple = true) fields: Option[String],
-      @ApiParam(value = "limit the number of records returned", required = false, defaultValue = "100") limit: Option[Int],
-      @ApiParam(value = "returns from this offset in the result set", required = false) offset: Option[Int],
-      @ApiParam(value = "sets the namespace used in the query and the return set", required = false) namespace: Option[String],
-      @ApiParam(value = "output format", required = true, allowableValues = "jsonld",
-        defaultValue = "jsonld") format: String) = no.met.security.AuthorizedAction {
+    @ApiParam(value = "The MET API source ID(s) that you want metadata for. Enter a comma-separated list to select multiple sources.",
+              required = false)
+              ids: Option[String],
+    @ApiParam(value = "The type of MET API source that you want metadata for.",
+              required = false,
+              allowableValues = "SensorSystem")
+              types: Option[String],
+    @ApiParam(value = "get only sources located within this WSEN bounding box",
+              required = false)
+              bbox: Option[String],
+    @ApiParam(value = "The time during which the MET API source must be valid (i.e., operational).",
+              required = false)
+              validtime: Option[String],
+    @ApiParam(value = "Fields to access",
+              required = false,
+              allowableValues = "value,unit,qualityCode")
+              fields: Option[String],
+    //@ApiParam(value = "limit the number of records returned",
+    //          required = false,
+    //          defaultValue = "100")
+    //          limit: Option[Int],
+    //@ApiParam(value = "returns from this offset in the result set",
+    //          required = false)
+    //          offset: Option[Int],
+    //@ApiParam(value = "sets the namespace used in the query and the return set",
+    //          required = false)
+    //          namespace: Option[String],
+    @ApiParam(value = "The output format of the result.",
+              allowableValues = "jsonld",
+              defaultValue = "jsonld",
+              required = true)
+              format: String) = no.met.security.AuthorizedAction {
     implicit request =>
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
     Try {
-      //if (types == "SensorSystem") { // suggest we default to this and use sourceid prefix to determine type when possible
-
+      val sourceList : Array[String] = ids match {
+        case Some(id) => id.toUpperCase.split(",").map(_.trim)
+        case _ => Array()
+      }
       val bboxList : Array[Double] = bbox match {
         case Some(bbox) => bbox.split(",").map(_.toDouble) // TODO - check that exactly 0 or 4
         case _ => Array()
       }
       if (bboxList.length > 0 && bboxList.length != 4) throw new Exception("bbox parameter must contain exactly 4 comma-separated numbers")
-
-      val sourceList : Array[String] = sources match {
-        case Some(sources) => sources.toUpperCase.split(",").map(_.trim)
-        case _ => Array()
-      }
-
-      stationDatabaseService.getStations(sourceList, types, validtime, bboxList, fields, limit, offset)
-
+      sourceAccess.getStations(sourceList, types, bboxList, validtime, fields)
     } match {
       case Success(data) =>
-      if (data isEmpty) {
-        NotFound("Found no data for sources " + sources.getOrElse("<all>"))
-      } else {
-        implicit val sourceFormat = Json.format[Station]
-        format.toLowerCase() match {
-          case "jsonld" => Ok(JsonFormat.format(start, data)) as "application/vnd.no.met.data.sources-v0+json"
-          case x        => BadRequest(s"Invalid output format: $x")
+        if (data isEmpty) {
+          NotFound("Found no data for sources " + ids.getOrElse("<all>"))
+        } else {
+          format.toLowerCase() match {
+            case "jsonld" => Ok(JsonFormat.format(start, data)) as "application/vnd.no.met.data.sources-v0+json"
+            case x        => BadRequest(s"Invalid output format: $x")
+          }
         }
-      }
-      //} else {
-        //NotFound("Only type SensorSystem currently implemented")
-      //}
       case Failure(x) => BadRequest(x getLocalizedMessage)
     }
   }
+
 }

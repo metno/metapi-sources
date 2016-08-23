@@ -23,24 +23,20 @@
     MA 02110-1301, USA
 */
 
-package no.met.stinfosys
+package services.sources
 
-import anorm.Row
-import play.Logger
-import scala.util._
-
-case class Station(
-  sourceid: String,
-  name: String,
-  country: String,
-  wmono: Option[Int],
-  height: Option[Int],
-  lat: Option[Double],
-  lon: Option[Double],
-  fromdate: String
-)
+import play.api._
+import models.Source
 
 /**
- * Complete response data set to send to clients
+ * Abstract class for SourceAccess injection
  */
-case class ResponseData(header: no.met.data.BasicResponseData, data: Traversable[Station])
+abstract class SourceAccess {
+
+  def getStations(ids: Array[String],
+                  types: Option[String],
+                  bbox: Array[Double],
+                  validTime: Option[String],
+                  fields: Option[String]): List[Source]
+
+}

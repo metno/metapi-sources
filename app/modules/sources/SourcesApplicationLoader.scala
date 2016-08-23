@@ -38,7 +38,7 @@ import services.sources._
 class SourcesProdModule extends AbstractModule {
 
   def configure() {
-    bind(classOf[StationDatabaseAccess]).to(classOf[StinfosysDatabaseAccess])
+    bind(classOf[SourceAccess]).to(classOf[StinfosysAccess])
   }
 
 }
@@ -50,7 +50,7 @@ class SourcesProdModule extends AbstractModule {
 class SourcesTestModule extends AbstractModule {
 
   def configure() {
-    bind(classOf[StationDatabaseAccess]).to(classOf[MockStationDatabaseAccess])
+    bind(classOf[SourceAccess]).to(classOf[MockSourceAccess])
   }
 
 }

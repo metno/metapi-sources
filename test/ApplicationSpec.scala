@@ -44,19 +44,19 @@ class SourcesApplicationSpec extends Specification {
   "sources plugin" should {
 
     "get a list of stations" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?limit=10")).get
+      val response = route(FakeRequest(GET, "/v0.jsonld")).get
       contentAsString(response) must contain ("SensorSystem")
     }
 
     "get a specific station" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?sources=KN4200")).get
+      val response = route(FakeRequest(GET, "/v0.jsonld?ids=SN4200")).get
       val json = Json.parse(contentAsString(response))
       contentAsString(response) must contain ("KJELLER")
       (json \ "data").as[JsArray].value.size must equalTo(1)
     }
 
     "get a list of specific stations" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?sources=KN70740,KN377200,KN4794600")).get
+      val response = route(FakeRequest(GET, "/v0.jsonld?ids=SN70740,SN377200,SN4794600")).get
       status(response) must equalTo(OK)
       val json = Json.parse(contentAsString(response))
       (json \ "data").as[JsArray].value.size must equalTo(3)
@@ -81,7 +81,7 @@ class SourcesApplicationSpec extends Specification {
     }
 
     "return 404 for incorrect id" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?sources=dummy")).get
+      val response = route(FakeRequest(GET, "/v0.jsonld?ids=dummy")).get
       status(response) must equalTo(NOT_FOUND)
     }
 
