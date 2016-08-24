@@ -59,9 +59,9 @@ case class Source(
   @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway.") country: String,
   @(ApiModelProperty @field)(value="The assigned WMO number for a SensorSystem, if one exists.", example="1492") wmoNumber: Option[Int],
   @(ApiModelProperty @field)(value="Spatial location data for the source.") geometry: Option[Point],
-  @(ApiModelProperty @field)(value="The level of the source.") level: Option[Double],
-  @(ApiModelProperty @field)(value="The level unit of the source.") levelUnit: Option[String],
-  @(ApiModelProperty @field)(value="The level typeof the source.") levelType: Option[String],
-  @(ApiModelProperty @field)(value="The date from which the source was valid.") validFrom: String,
-  @(ApiModelProperty @field)(value="The date to which the source was valid (if no longer valid).") validTo: Option[String]
+  @(ApiModelProperty @field)(value="The level of the source." example="74") level: Option[Double],
+  @(ApiModelProperty @field)(value="The level unit of the source." example="m") levelUnit: Option[String],
+  @(ApiModelProperty @field)(value="The level type of the source." example="height_above_geoid") levelType: Option[String],
+  @(ApiModelProperty @field)(value="The date from which the source was valid." example="1974-05-29T00:00:00Z") validFrom: String,
+  @(ApiModelProperty @field)(value="The date to which the source was valid (if no longer valid)." example="2006-09-01T00:00:00Z") validTo: Option[String]
 )
