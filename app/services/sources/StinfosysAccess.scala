@@ -37,6 +37,7 @@ import scala.annotation.tailrec
 import scala.concurrent._
 import scala.language.postfixOps
 import scala.util._
+import no.met.geometry.Point
 import models._
 
 //$COVERAGE-OFF$Not testing database queries
@@ -56,7 +57,7 @@ class StinfosysAccess extends SourceAccess {
     get[Double]("lon") ~
     get[String]("fromdate") ~
     get[Option[String]]("todate") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorSystem", sourceid, name, country, wmono, Some(SPoint("Point", Array(lon, lat))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
+      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorSystem", sourceid, name, country, wmono, Some(Point(coordinates=Seq(lon, lat))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
     }
   }
 

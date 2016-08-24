@@ -30,8 +30,9 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.github.nscala_time.time.Imports._
 import java.net.URL
-import no.met.data.{ApiConstants,BasicResponseData,ConfigUtil}
-import no.met.data.format.json.BasicJsonFormat
+import no.met.data.{ApiConstants,ConfigUtil}
+import no.met.geometry.Point
+import no.met.json.BasicJsonFormat
 import models._
 
 
@@ -40,20 +41,13 @@ import models._
  */
 object JsonFormat extends BasicJsonFormat {
 
-  /* JsValue Writers */
-
-  implicit val pointWrites: Writes[SPoint] = (
-    (JsPath \ "@type").write[String] and 
-    (JsPath \ "coordinates").write[Seq[Double]]
-  )(unlift(SPoint.unapply))
-
   implicit val sourceWrites: Writes[Source] = (
     (JsPath \ "@type").write[String] and
     (JsPath \ "id").write[String] and
     (JsPath \ "name").write[String] and
     (JsPath \ "country").write[String] and
     (JsPath \ "wmoNumber").writeNullable[Int] and
-    (JsPath \ "geometry").writeNullable[SPoint] and
+    (JsPath \ "geometry").writeNullable[Point] and
     (JsPath \ "level").writeNullable[Double] and
     (JsPath \ "levelUnit").writeNullable[String] and
     (JsPath \ "levelType").writeNullable[String] and
