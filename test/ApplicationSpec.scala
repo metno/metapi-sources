@@ -62,14 +62,6 @@ class SourcesApplicationSpec extends Specification {
       (json \ "data").as[JsArray].value.size must equalTo(3)
     }
 
-    "find station by geographic coordinates" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?bbox=-30,58,0,66")).get
-      status(response) must equalTo(OK)
-      val json = Json.parse(contentAsString(response))
-      contentAsString(response) must contain ("KEFLAVIKURFLUGVOLLUR")
-      (json \ "data").as[JsArray].value.size must equalTo(1)
-    }
-
     "returns correct contentType for getStations" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld?limit=1")).get
       status(response) must equalTo(OK)
@@ -80,13 +72,8 @@ class SourcesApplicationSpec extends Specification {
       route(FakeRequest(GET, "/boum")) must beSome.which (status(_) == NOT_FOUND)
     }
 
-    "return 404 for incorrect id" in new WithApplication(TestUtil.app) {
+    "return 400 for incorrect source id" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld?ids=dummy")).get
-      status(response) must equalTo(NOT_FOUND)
-    }
-
-    "return error for incorrect coordinates" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?bbox=-30,58,0,66,99")).get
       status(response) must equalTo(BAD_REQUEST)
     }
 

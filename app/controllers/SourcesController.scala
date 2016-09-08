@@ -33,6 +33,7 @@ import javax.inject.Inject
 import io.swagger.annotations._
 import scala.language.postfixOps
 import util._
+import no.met.data.SourceSpecification
 import models.Source
 import services.sources.{ SourceAccess, JsonFormat }
 
@@ -59,15 +60,14 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
               required = false,
               allowableValues = "SensorSystem")
               types: Option[String],
-    @ApiParam(value = "get only sources located within this WSEN bounding box",
+    @ApiParam(value = "Get MET API sources defined by a specified geometry. Geometries are specified as either a POINT or POLYGON using <a href='https://en.wikipedia.org/wiki/Well-known_text'>WKT</a>; see the reference section on the <a href=reference/index.html#geometry_specification>Geometry Specification</a> for documentation and examples.",
               required = false)
-              bbox: Option[String],
+              geometry: Option[String],
     @ApiParam(value = "The time during which the MET API source must be valid (i.e., operational).",
               required = false)
               validtime: Option[String],
     @ApiParam(value = "Fields to access",
-              required = false,
-              allowableValues = "value,unit,qualityCode")
+              required = false)
               fields: Option[String],
     //@ApiParam(value = "limit the number of records returned",
     //          required = false,
@@ -88,16 +88,11 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
     Try {
-      val sourceList : Array[String] = ids match {
-        case Some(id) => id.toUpperCase.split(",").map(_.trim)
-        case _ => Array()
+      val sourceList : Seq[String] = ids match {
+        case Some(ids) => SourceSpecification.parse(ids)
+        case _ => Seq()
       }
-      val bboxList : Array[Double] = bbox match {
-        case Some(bbox) => bbox.split(",").map(_.toDouble) // TODO - check that exactly 0 or 4
-        case _ => Array()
-      }
-      if (bboxList.length > 0 && bboxList.length != 4) throw new Exception("bbox parameter must contain exactly 4 comma-separated numbers")
-      sourceAccess.getStations(sourceList, types, bboxList, validtime, fields)
+      sourceAccess.getStations(sourceList, types, geometry, validtime, fields)
     } match {
       case Success(data) =>
         if (data isEmpty) {

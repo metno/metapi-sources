@@ -37,7 +37,7 @@ import scala.annotation.tailrec
 import scala.concurrent._
 import scala.language.postfixOps
 import scala.util._
-import no.met.geometry.Point
+import no.met.geometry._
 import models._
 
 //$COVERAGE-OFF$Not testing database queries
@@ -53,64 +53,71 @@ class StinfosysAccess extends SourceAccess {
     get[String]("country") ~
     get[Option[Int]]("wmono") ~
     get[Option[Double]]("hs") ~
-    get[Double]("lat") ~
-    get[Double]("lon") ~
+    get[Option[Double]]("lat") ~
+    get[Option[Double]]("lon") ~
     get[String]("fromdate") ~
     get[Option[String]]("todate") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorSystem", sourceid, name, country, wmono, Some(Point(coordinates=Seq(lon, lat))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
+      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorPlatform", sourceid, name, country, wmono, if (lon.isEmpty||lat.isEmpty) None else Some(Point(coordinates=Seq(lon.get, lat.get))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
     }
   }
 
-  def getStations(ids: Array[String], types: Option[String], bbox: Array[Double], validTime: Option[String], fields: Option[String]): List[Source] = {
+  def getStations(ids: Seq[String], types: Option[String], geometry: Option[String], validTime: Option[String], fields: Option[String]): List[Source] = {
 
-    DB.withConnection("sources") { implicit conn =>
-
-      //val _limit: NamedParameter = "limit" -> limit.getOrElse(defaultLimit)
-      //val _offset: NamedParameter = "offset" -> offset.getOrElse(0)
-      // can't get Seq[NamedParameter] to work inside .on()
-
-      val latlonclause = if (bbox.length > 0) {
-          // coords have been cast to Double so should be safe from XSS attacks
-          s"(lon BETWEEN ${bbox(0)} AND ${bbox(2)}) AND (lat BETWEEN ${bbox(1)} AND ${bbox(3)}) "
-        } else { "" }
-      
-      val getStationsQuery = s"""
-            SELECT
-           | 'SN'||stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
-           |FROM
-           | station s, country c
-           |WHERE
-           | c.countryid = s.countryid
-           | AND s.totime is null
-           | ${latlonclause}
-           |ORDER BY
-           | stationid
-           |LIMIT {limit} OFFSET {offset}""".stripMargin
-
-      val getStationsByIdQuery = s"""
-            SELECT
-           | 'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
-           |FROM
-           | station s, country c
-           |WHERE
-           | 'KN'||stationid IN ({stations})
-           | AND c.countryid = s.countryid
-           | AND s.totime is null
-           | AND ${latlonclause}
-           |ORDER BY
-           | stationid""".stripMargin
-
-      Logger.debug(getStationsQuery)
-
-      val result = if (ids.length > 0) {
-        SQL(getStationsByIdQuery).on( "stations" -> ids.toList ).as( parser * )
-      } else {
-        SQL(getStationsQuery).as( parser * )
-      }
-
-      result
-
+    val idsQ = if (ids.length > 0) {
+      val idList = ids.mkString(",")
+      s"stationid IN (${idList})"
+    } else "TRUE"
+    val query = if (geometry.isEmpty) {
+      s"""
+      |SELECT
+        | 'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
+      |FROM
+        | station s, country c
+      |WHERE
+        | $idsQ
+        | AND c.countryid = s.countryid
+        | AND s.totime is null
+      |ORDER BY
+        | sourceId""".stripMargin
     }
+    else {
+      val geom = Geometry.decode(geometry.get)
+      if (geom.isInterpolated) {
+        s"""
+        |SELECT
+          |'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
+        |FROM
+          |station s, country c
+        |WHERE
+          |$idsQ AND
+          |c.countryid = s.countryid AND
+          |s.totime is null
+        |ORDER BY
+          |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), sourceid
+        |LIMIT 1""".stripMargin
+      }
+      else {
+        s"""
+        |SELECT
+          | 'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
+        |FROM
+          | station s, country c
+        |WHERE
+          |$idsQ AND
+          |c.countryid = s.countryid AND
+          |s.totime is null AND
+          |ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
+        |ORDER BY
+          |sourceId""".stripMargin
+      }
+    }
+
+    Logger.debug(query)
+  
+    DB.withConnection("sources") { implicit connection =>
+      SQL(query).as( parser * )
+    }
+
   }
 
 }
