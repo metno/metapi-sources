@@ -38,6 +38,7 @@ import models.Source
 import services.sources.{ SourceAccess, JsonFormat }
 
 // scalastyle:off magic.number
+// scalastyle:off line.size.limit
 
 @Api(value = "sources")
 class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller {
@@ -66,7 +67,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "The time during which the MET API source must be valid (i.e., operational).",
               required = false)
               validtime: Option[String],
-    @ApiParam(value = "Fields to access",
+    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set. Note that the @type context is always included and cannot be filtered out.",
               required = false)
               fields: Option[String],
     //@ApiParam(value = "limit the number of records returned",
@@ -83,7 +84,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
               allowableValues = "jsonld",
               defaultValue = "jsonld",
               required = true)
-              format: String) = no.met.security.AuthorizedAction {
+              format: String) = Action {
     implicit request =>
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
@@ -92,7 +93,11 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
         case Some(ids) => SourceSpecification.parse(ids)
         case _ => Seq()
       }
-      sourceAccess.getStations(sourceList, types, geometry, validtime, fields)
+      val fieldList : Set[String] = fields match {
+          case Some(x) => x.toLowerCase.split(",").map(_.trim).toSet
+          case _ => Set()
+      }
+      sourceAccess.getStations(sourceList, types, geometry, validtime, fieldList)
     } match {
       case Success(data) =>
         if (data isEmpty) {
@@ -108,3 +113,6 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
   }
 
 }
+
+// scalastyle:on
+

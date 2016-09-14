@@ -31,7 +31,7 @@ import play.api.libs.functional.syntax._
 import com.github.nscala_time.time.Imports._
 import java.net.URL
 import no.met.data.{ApiConstants,ConfigUtil}
-import no.met.geometry.Point
+import no.met.geometry._
 import no.met.json.BasicJsonFormat
 import models._
 
@@ -43,15 +43,13 @@ object JsonFormat extends BasicJsonFormat {
 
   implicit val sourceWrites: Writes[Source] = (
     (JsPath \ "@type").write[String] and
-    (JsPath \ "id").write[String] and
-    (JsPath \ "name").write[String] and
-    (JsPath \ "country").write[String] and
+    (JsPath \ "id").writeNullable[String] and
+    (JsPath \ "name").writeNullable[String] and
+    (JsPath \ "country").writeNullable[String] and
     (JsPath \ "wmoIdentifier").writeNullable[Int] and
     (JsPath \ "geometry").writeNullable[Point] and
-    (JsPath \ "level").writeNullable[Double] and
-    (JsPath \ "levelUnit").writeNullable[String] and
-    (JsPath \ "levelType").writeNullable[String] and
-    (JsPath \ "validFrom").write[String] and
+    (JsPath \ "levels").writeNullable[Seq[Level]] and
+    (JsPath \ "validFrom").writeNullable[String] and
     (JsPath \ "validTo").writeNullable[String]
   )(unlift(Source.unapply))
 

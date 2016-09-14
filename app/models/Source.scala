@@ -30,7 +30,7 @@ import scala.annotation.meta.field
 import java.net.URL
 import com.github.nscala_time.time.Imports._
 import no.met.data.{ApiConstants,BasicResponse}
-import no.met.geometry.Point
+import no.met.geometry._
 
 @ApiModel(description="Data response for source metadata.")
 case class SourceResponse(
@@ -54,14 +54,12 @@ extends BasicResponse( context, responseType, apiVersion, license, createdAt, qu
 @ApiModel(description="Metadata for a single source.")
 case class Source(
   @(ApiModelProperty @field)(name="@type", value="The source type of the Source.", example="SensorPlatform") sType: String,
-  @(ApiModelProperty @field)(value="The MET API id of the source.", example="SN18700") id: String,
-  @(ApiModelProperty @field)(value="The name of the source.", example="OSLO - BLINDERN") name: String,
-  @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway.") country: String,
+  @(ApiModelProperty @field)(value="The MET API id of the source.", example="SN18700") id: Option[String],
+  @(ApiModelProperty @field)(value="The name of the source.", example="OSLO - BLINDERN") name: Option[String],
+  @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway.") country: Option[String],
   @(ApiModelProperty @field)(value="The assigned WMO number for a SensorPlatform, if one exists.", example="1492") wmoIdentifier: Option[Int],
   @(ApiModelProperty @field)(value="Spatial location data for the source.") geometry: Option[Point],
-  @(ApiModelProperty @field)(value="The level of the source.", example="74") level: Option[Double],
-  @(ApiModelProperty @field)(value="The level unit of the source.", example="m") levelUnit: Option[String],
-  @(ApiModelProperty @field)(value="The level type of the source.", example="height_above_geoid") levelType: Option[String],
-  @(ApiModelProperty @field)(value="The date from which the source was valid.", example="1974-05-29T00:00:00Z") validFrom: String,
-  @(ApiModelProperty @field)(value="The date to which the source was valid (if no longer valid).", example="2006-09-01T00:00:00Z") validTo: Option[String]
+  @(ApiModelProperty @field)(value="The level of the source.", example="74") levels: Option[Seq[Level]],
+  @(ApiModelProperty @field)(value="The datetime from which the source is valid.", example="1974-05-29T00:00:00Z") validFrom: Option[String],
+  @(ApiModelProperty @field)(value="The datetime to which the source was valid (if no longer valid).", example="2006-09-01T00:00:00Z") validTo: Option[String]
 )

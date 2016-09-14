@@ -31,13 +31,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import play.api.libs.json._
 import TestUtil._
-//import scala.concurrent.Future
 
-/**
- * Add your spec here.
- * You can mock out a whole application including requests, plugins etc.
- * For more information, consult the wiki.
- */
 @RunWith(classOf[JUnitRunner])
 class SourcesApplicationSpec extends Specification {
 
@@ -80,6 +74,11 @@ class SourcesApplicationSpec extends Specification {
     "returns error for incorrect format in getStations" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.torrent?limit=1")).get
       status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "get a list of stations with fields specified" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/v0.jsonld?fields=id,country")).get
+      contentAsString(response) must contain ("SensorSystem")
     }
 
   }

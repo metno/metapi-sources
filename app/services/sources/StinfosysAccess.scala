@@ -37,6 +37,7 @@ import scala.annotation.tailrec
 import scala.concurrent._
 import scala.language.postfixOps
 import scala.util._
+import no.met.data._
 import no.met.geometry._
 import models._
 
@@ -48,21 +49,46 @@ import models._
 class StinfosysAccess extends SourceAccess {
 
   val parser: RowParser[Source] = {
-    get[String]("sourceid") ~
-    get[String]("name") ~
-    get[String]("country") ~
-    get[Option[Int]]("wmono") ~
-    get[Option[Double]]("hs") ~
+    get[Option[String]]("id") ~
+    get[Option[String]]("name") ~
+    get[Option[String]]("country") ~
+    get[Option[Int]]("wmoidentifier") ~
+    get[Option[Double]]("level") ~
     get[Option[Double]]("lat") ~
     get[Option[Double]]("lon") ~
-    get[String]("fromdate") ~
-    get[Option[String]]("todate") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => Source("SensorPlatform", sourceid, name, country, wmono, if (lon.isEmpty||lat.isEmpty) None else Some(Point(coordinates=Seq(lon.get, lat.get))), hs, Some("m"), Some("height_above_ground"), fromDate, toDate)
+    get[Option[String]]("validfrom") ~
+    get[Option[String]]("validto") map {
+      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => 
+        Source("SensorPlatform",
+               sourceid,
+               name,
+               country,
+               wmono,
+               if (lon.isEmpty||lat.isEmpty) None else Some(Point(coordinates=Seq(lon.get, lat.get))),
+               if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
+               fromDate,
+               toDate)
     }
   }
 
-  def getStations(ids: Seq[String], types: Option[String], geometry: Option[String], validTime: Option[String], fields: Option[String]): List[Source] = {
+  def getSelectQuery(fields: Set[String]) : String = {
+    val legalFields = Set("id", "name", "country", "wmoidentifier", "geometry", "level", "validfrom", "validto")
+    val illegalFields = fields -- legalFields
+    if (!illegalFields.isEmpty) throw new BadRequestException("Invalid fields in the query parameter: " + illegalFields.mkString(","))
+    val fieldStr = fields.mkString(", ")
+      .replace("geometry", "lat, lon")
+    val missing = legalFields -- fields
+    if (missing.isEmpty)
+      fieldStr
+    else {
+      val missingStr = missing.map( x => "NULL AS " + x ).mkString(", ").replace("NULL AS geometry", "NULL AS lat, NULL AS LON")
+      fieldStr + "," + missingStr
+    }
+  }
 
+  def getStations(ids: Seq[String], types: Option[String], geometry: Option[String], validTime: Option[String], fields: Set[String]): List[Source] = {
+    val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
+    // Filter by source id
     val idsQ = if (ids.length > 0) {
       val idList = ids.mkString(",")
       s"stationid IN (${idList})"
@@ -70,45 +96,54 @@ class StinfosysAccess extends SourceAccess {
     val query = if (geometry.isEmpty) {
       s"""
       |SELECT
-        | 'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
+        |$selectQ
       |FROM
-        | station s, country c
-      |WHERE
-        | $idsQ
-        | AND c.countryid = s.countryid
-        | AND s.totime is null
-      |ORDER BY
-        | sourceId""".stripMargin
+        |(SELECT
+          |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+        |FROM
+          |station s, country c
+        |WHERE
+          |$idsQ
+          |AND c.countryid = s.countryid
+          |AND s.totime is null
+        |ORDER BY
+          |id) t0""".stripMargin
     }
     else {
       val geom = Geometry.decode(geometry.get)
       if (geom.isInterpolated) {
         s"""
         |SELECT
-          |'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
+          |$selectQ
         |FROM
-          |station s, country c
-        |WHERE
-          |$idsQ AND
-          |c.countryid = s.countryid AND
-          |s.totime is null
-        |ORDER BY
-          |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), sourceid
-        |LIMIT 1""".stripMargin
+          |(SELECT
+            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+          |FROM
+            |station s, country c
+          |WHERE
+            |$idsQ AND
+            |c.countryid = s.countryid AND
+            |s.totime is null
+          |ORDER BY
+            |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), id
+          |LIMIT 1) t0""".stripMargin
       }
       else {
         s"""
         |SELECT
-          | 'SN'|| stationid AS sourceid, s.name AS name, c.name AS country, wmono, hs, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS fromdate, TO_CHAR(totime, 'YYYY-MM-DD') AS todate
+          |$selectQ
         |FROM
-          | station s, country c
-        |WHERE
-          |$idsQ AND
-          |c.countryid = s.countryid AND
-          |s.totime is null AND
-          |ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
-        |ORDER BY
-          |sourceId""".stripMargin
+          |(SELECT
+            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+          |FROM
+            | station s, country c
+          |WHERE
+            |$idsQ AND
+            |c.countryid = s.countryid AND
+            |s.totime is null AND
+            |ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
+          |ORDER BY
+            |id) t0""".stripMargin
       }
     }
 
