@@ -71,7 +71,7 @@ class StinfosysAccess extends SourceAccess {
     }
   }
 
-  def getSelectQuery(fields: Set[String]) : String = {
+  private def getSelectQuery(fields: Set[String]) : String = {
     val legalFields = Set("id", "name", "country", "wmoidentifier", "geometry", "level", "validfrom", "validto")
     val illegalFields = fields -- legalFields
     if (!illegalFields.isEmpty) throw new BadRequestException("Invalid fields in the query parameter: " + illegalFields.mkString(","))

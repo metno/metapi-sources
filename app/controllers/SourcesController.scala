@@ -84,7 +84,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
               allowableValues = "jsonld",
               defaultValue = "jsonld",
               required = true)
-              format: String) = Action {
+              format: String) = no.met.security.AuthorizedAction {
     implicit request =>
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
