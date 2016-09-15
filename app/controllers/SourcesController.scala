@@ -33,7 +33,7 @@ import javax.inject.Inject
 import io.swagger.annotations._
 import scala.language.postfixOps
 import util._
-import no.met.data.SourceSpecification
+import no.met.data.{ SourceSpecification, FieldSpecification }
 import models.Source
 import services.sources.{ SourceAccess, JsonFormat }
 
@@ -93,10 +93,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
         case Some(ids) => SourceSpecification.parse(ids)
         case _ => Seq()
       }
-      val fieldList : Set[String] = fields match {
-          case Some(x) => x.toLowerCase.split(",").map(_.trim).toSet
-          case _ => Set()
-      }
+      val fieldList : Set[String] = FieldSpecification.parse(fields)
       sourceAccess.getStations(sourceList, types, geometry, validtime, fieldList)
     } match {
       case Success(data) =>
