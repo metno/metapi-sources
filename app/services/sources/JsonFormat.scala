@@ -54,7 +54,7 @@ object JsonFormat extends BasicJsonFormat {
   )(unlift(Source.unapply))
 
   implicit val sourceResponseWrites: Writes[SourceResponse] = (
-    (JsPath \ ApiConstants.CONTEXT_NAME).write[URL] and 
+    (JsPath \ ApiConstants.CONTEXT_NAME).write[URL] and
     (JsPath \ ApiConstants.OBJECT_TYPE_NAME).write[String] and
     (JsPath \ ApiConstants.API_VERSION_NAME).write[String] and
     (JsPath \ ApiConstants.LICENSE_NAME).write[URL] and
@@ -69,7 +69,7 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ ApiConstants.CURRENT_LINK_NAME).write[URL] and
     (JsPath \ ApiConstants.DATA_NAME).write[Seq[Source]]
   )(unlift(SourceResponse.unapply))
-  
+
   /**
    * Create json representation of the given list
    * @param start Start time of the query processing.

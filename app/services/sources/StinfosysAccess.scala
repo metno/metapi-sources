@@ -58,7 +58,7 @@ class StinfosysAccess extends SourceAccess {
     get[Option[Double]]("lon") ~
     get[Option[String]]("validfrom") ~
     get[Option[String]]("validto") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate => 
+      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate =>
         Source("SensorPlatform",
                sourceid,
                name,
@@ -78,8 +78,9 @@ class StinfosysAccess extends SourceAccess {
     val fieldStr = fields.mkString(", ")
       .replace("geometry", "lat, lon")
     val missing = legalFields -- fields
-    if (missing.isEmpty)
+    if (missing.isEmpty) {
       fieldStr
+    }
     else {
       val missingStr = missing.map( x => "NULL AS " + x ).mkString(", ").replace("NULL AS geometry", "NULL AS lat, NULL AS LON")
       fieldStr + "," + missingStr
@@ -92,14 +93,17 @@ class StinfosysAccess extends SourceAccess {
     val idsQ = if (ids.length > 0) {
       val idList = ids.mkString(",")
       s"stationid IN (${idList})"
-    } else "TRUE"
+    } else {
+      "TRUE"
+    }
     val query = if (geometry.isEmpty) {
       s"""
       |SELECT
         |$selectQ
       |FROM
         |(SELECT
-          |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+          |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level,
+          |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
         |FROM
           |station s, country c
         |WHERE
@@ -117,7 +121,8 @@ class StinfosysAccess extends SourceAccess {
           |$selectQ
         |FROM
           |(SELECT
-            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level,
+            |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
           |FROM
             |station s, country c
           |WHERE
@@ -134,7 +139,8 @@ class StinfosysAccess extends SourceAccess {
           |$selectQ
         |FROM
           |(SELECT
-            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level, lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level,
+            |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
           |FROM
             | station s, country c
           |WHERE
@@ -148,7 +154,7 @@ class StinfosysAccess extends SourceAccess {
     }
 
     Logger.debug(query)
-  
+
     DB.withConnection("sources") { implicit connection =>
       SQL(query).as( parser * )
     }

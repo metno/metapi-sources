@@ -52,7 +52,7 @@ class MockSourceAccess extends SourceAccess {
   def getStations(ids: Seq[String], types: Option[String], geometry: Option[String], validTime: Option[String], fields: Set[String]): List[Source] = {
     mockSourcelist.
       filter(s => ids.length == 0 || ids.contains(s.id.get))
-    
+
   }
 
 }

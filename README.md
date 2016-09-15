@@ -6,7 +6,7 @@ only metadata from the STInfoSys database is available.
 
 # Run
 
-To be able to use the system, you will usually want to modify the 
+To be able to use the system, you will usually want to modify the
 configuration files. For development purposes, you can instead create a file
 `conf/development.conf` with the following entries:
 ```

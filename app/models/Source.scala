@@ -48,8 +48,9 @@ case class SourceResponse(
   @(ApiModelProperty @field)(value=ApiConstants.PREVIOUS_LINK, example=ApiConstants.PREVIOUS_LINK_EXAMPLE) previousLink: Option[URL],
   @(ApiModelProperty @field)(value=ApiConstants.CURRENT_LINK, example=ApiConstants.CURRENT_LINK_EXAMPLE) currentLink: URL,
   @(ApiModelProperty @field)(value=ApiConstants.DATA) data: Seq[Source]
-) 
-extends BasicResponse( context, responseType, apiVersion, license, createdAt, queryTime, currentItemCount, itemsPerPage, offset, totalItemCount, nextLink, previousLink, currentLink)
+)
+extends BasicResponse( context, responseType, apiVersion, license, createdAt, queryTime, currentItemCount, itemsPerPage, offset, totalItemCount,
+    nextLink, previousLink, currentLink)
 
 @ApiModel(description="Metadata for a single source.")
 case class Source(

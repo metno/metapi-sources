@@ -115,4 +115,3 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
 }
 
 // scalastyle:on
-
