@@ -89,10 +89,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     // Start the clock
     val start = DateTime.now(DateTimeZone.UTC)
     Try {
-      val sourceList : Seq[String] = ids match {
-        case Some(ids) => SourceSpecification.parse(ids)
-        case _ => Seq()
-      }
+      val sourceList = SourceSpecification.parse(ids)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
       sourceAccess.getStations(sourceList, types, geometry, validtime, fieldList)
     } match {
