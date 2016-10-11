@@ -91,8 +91,8 @@ class StinfosysAccess extends SourceAccess {
     val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
     // Filter by source id
     val idsQ = if (ids.length > 0) {
-      val idList = ids.mkString(",")
-      s"stationid IN (${idList})"
+      val idStr = SourceSpecification.sql(ids, "stationid", None)
+      s"($idStr)"
     } else {
       "TRUE"
     }
