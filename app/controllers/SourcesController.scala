@@ -33,7 +33,7 @@ import javax.inject.Inject
 import io.swagger.annotations._
 import scala.language.postfixOps
 import util._
-import no.met.data.{ SourceSpecification, FieldSpecification }
+import no.met.data._
 import models.Source
 import services.sources.{ SourceAccess, JsonFormat }
 
@@ -86,8 +86,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
               required = true)
               format: String) = no.met.security.AuthorizedAction {
     implicit request =>
-    // Start the clock
-    val start = DateTime.now(DateTimeZone.UTC)
+    val start = DateTime.now(DateTimeZone.UTC) // start the clock
     Try {
       val sourceList = SourceSpecification.parse(ids)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
@@ -95,14 +94,19 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     } match {
       case Success(data) =>
         if (data isEmpty) {
-          NotFound("Found no data for sources " + ids.getOrElse("<all>"))
+          Error.error(NOT_FOUND,
+            Some("No data found for any of the source ids"),
+            Some("Ensure that information exists for at least one source id"), start)
         } else {
           format.toLowerCase() match {
             case "jsonld" => Ok(JsonFormat.format(start, data)) as "application/vnd.no.met.data.sources-v0+json"
-            case x        => BadRequest(s"Invalid output format: $x")
+            case x        => Error.error(BAD_REQUEST, Some(s"Invalid output format: $x"), Some("Supported output formats: jsonld"), start)
           }
         }
-      case Failure(x) => BadRequest(x getLocalizedMessage)
+      case Failure(x: BadRequestException) =>
+        Error.error(BAD_REQUEST, Some(x getLocalizedMessage), x help, start)
+      case Failure(x) =>
+        Error.error(BAD_REQUEST, Some(x getLocalizedMessage), None, start)
     }
   }
 
