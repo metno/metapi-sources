@@ -56,8 +56,8 @@ class SourcesApplicationSpec extends Specification {
       (json \ "data").as[JsArray].value.size must equalTo(3)
     }
 
-    "returns correct contentType for getStations" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?limit=1")).get
+    "return correct contentType" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/v0.jsonld")).get
       status(response) must equalTo(OK)
       contentType(response) must beSome.which(_ == "application/vnd.no.met.data.sources-v0+json")
     }
@@ -71,7 +71,7 @@ class SourcesApplicationSpec extends Specification {
       status(response) must equalTo(BAD_REQUEST)
     }
 
-    "returns error for incorrect format in getStations" in new WithApplication(TestUtil.app) {
+    "return error for incorrect format in getStations" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.torrent?limit=1")).get
       status(response) must equalTo(BAD_REQUEST)
     }
@@ -79,6 +79,12 @@ class SourcesApplicationSpec extends Specification {
     "get a list of stations with fields specified" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld?fields=id,country")).get
       contentAsString(response) must contain ("SensorSystem")
+    }
+
+    "return error if unsupported fields are specified" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/v0.jsonld?foo=bar")).get
+
+      status(response) must equalTo(BAD_REQUEST)
     }
 
   }

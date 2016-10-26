@@ -88,6 +88,9 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     implicit request =>
     val start = DateTime.now(DateTimeZone.UTC) // start the clock
     Try {
+      // ensure that the query string contains supported fields only
+      QueryStringUtil.ensureSubset(Set("ids", "types", "geometry", "validtime", "fields"), request.queryString.keySet)
+
       val sourceList = SourceSpecification.parse(ids)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
       sourceAccess.getStations(sourceList, types, geometry, validtime, fieldList)
