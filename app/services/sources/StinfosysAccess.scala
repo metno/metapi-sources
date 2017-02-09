@@ -74,7 +74,7 @@ class StinfosysAccess extends SourceAccess {
   private def getSelectQuery(fields: Set[String]) : String = {
     val legalFields = Set("id", "name", "country", "wmoidentifier", "geometry", "level", "validfrom", "validto")
     val illegalFields = fields -- legalFields
-    if (!illegalFields.isEmpty) {
+    if (illegalFields.nonEmpty) {
       throw new BadRequestException(
         "Invalid fields in the query parameter: " + illegalFields.mkString(","),
         Some(s"Supported fields: ${legalFields.mkString(", ")}"))
@@ -91,15 +91,36 @@ class StinfosysAccess extends SourceAccess {
     }
   }
 
-  def getStations(ids: Seq[String], types: Option[String], geometry: Option[String], validTime: Option[String], fields: Set[String]): List[Source] = {
+
+  private def replaceTrailingWildcard(s: String): String = {
+    if (s.nonEmpty && (s.last == '*')) s.updated(s.length - 1, '%') else s
+  }
+
+  private def preparedFilterQ(attr: String, value: Option[String], placeholder: String): String = {
+    value match {
+      case Some(s) if s.nonEmpty => s"lower($attr) LIKE lower({$placeholder})"
+      case _ => "TRUE"
+    }
+  }
+
+  // scalastyle:off method.length
+  def getStations(
+    ids: Seq[String], types: Option[String], geometry: Option[String], validTime: Option[String], name: Option[String],
+    country: Option[String], fields: Set[String]): List[Source] = {
+
     val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
+
     // Filter by source id
-    val idsQ = if (ids.length > 0) {
+    val idsQ = if (ids.nonEmpty) {
       val idStr = SourceSpecification.sql(ids, "stationid", None)
       s"($idStr)"
     } else {
       "TRUE"
     }
+
+    val nameQ = preparedFilterQ("s.name", name, "nameFilter")
+    val countryQ = preparedFilterQ("c.name", country, "countryFilter")
+
     val query = if (geometry.isEmpty) {
       s"""
       |SELECT
@@ -114,6 +135,8 @@ class StinfosysAccess extends SourceAccess {
           |$idsQ
           |AND c.countryid = s.countryid
           |AND s.totime is null
+          |AND $nameQ
+          |AND $countryQ
         |ORDER BY
           |id) t0""".stripMargin
     }
@@ -132,7 +155,9 @@ class StinfosysAccess extends SourceAccess {
           |WHERE
             |$idsQ AND
             |c.countryid = s.countryid AND
-            |s.totime is null
+            |s.totime is null AND
+            |$nameQ AND
+            |$countryQ
           |ORDER BY
             |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), id
           |LIMIT 1) t0""".stripMargin
@@ -151,6 +176,8 @@ class StinfosysAccess extends SourceAccess {
             |$idsQ AND
             |c.countryid = s.countryid AND
             |s.totime is null AND
+            |$nameQ AND
+            |$countryQ AND
             |ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
           |ORDER BY
             |id) t0""".stripMargin
@@ -160,10 +187,14 @@ class StinfosysAccess extends SourceAccess {
     Logger.debug(query)
 
     DB.withConnection("sources") { implicit connection =>
-      SQL(query).as( parser * )
+      SQL(query).on(
+        "nameFilter" -> replaceTrailingWildcard(name.getOrElse("")),
+        "countryFilter" -> replaceTrailingWildcard(country.getOrElse(""))
+      ).as( parser * )
     }
 
   }
+  // scalastyle:on method.length
 
 }
 

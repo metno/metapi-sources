@@ -37,6 +37,8 @@ abstract class SourceAccess {
                   types: Option[String],
                   geometry: Option[String],
                   validTime: Option[String],
+                  name: Option[String],
+                  country: Option[String],
                   fields: Set[String]): List[Source]
 
 }

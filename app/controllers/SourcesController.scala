@@ -67,6 +67,12 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "The time during which the MET API source must be valid (i.e., operational).",
               required = false)
               validtime: Option[String],
+    @ApiParam(value = "If specified, only sources whose 'name' attribute matches this filter may occur in the result. An optional wildcard asterisk may be specified at the end (e.g. 'lille*' would match 'Lillehammer').",
+              required = false)
+              name: Option[String],
+    @ApiParam(value = "If specified, only sources whose 'country' attribute matches this filter may occur in the result. An optional wildcard asterisk may be specified at the end (e.g. 'fin*' would match 'Finland').",
+              required = false)
+              country: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set. Note that the @type context is always included and cannot be filtered out.",
               required = false)
               fields: Option[String],
@@ -89,17 +95,17 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     val start = DateTime.now(DateTimeZone.UTC) // start the clock
     Try {
       // ensure that the query string contains supported fields only
-      QueryStringUtil.ensureSubset(Set("ids", "types", "geometry", "validtime", "fields"), request.queryString.keySet)
+      QueryStringUtil.ensureSubset(Set("ids", "types", "geometry", "validtime", "name", "country", "fields"), request.queryString.keySet)
 
       val sourceList = SourceSpecification.parse(ids)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
-      sourceAccess.getStations(sourceList, types, geometry, validtime, fieldList)
+      sourceAccess.getStations(sourceList, types, geometry, validtime, name, country, fieldList)
     } match {
       case Success(data) =>
         if (data isEmpty) {
           Error.error(NOT_FOUND,
-            Some("No data found for any of the source ids"),
-            Some("Ensure that information exists for at least one source id"), start)
+            Some("No data found for this combination of query parameters"),
+            Some("Try to leave out some or all query parameters to see what combinations are possible"), start)
         } else {
           format.toLowerCase() match {
             case "jsonld" => Ok(JsonFormat.format(start, data)) as "application/vnd.no.met.data.sources-v0+json"
