@@ -30,6 +30,8 @@ import org.junit.runner._
 import play.api.test._
 import play.api.test.Helpers._
 import play.api.libs.json._
+import no.met.data.StationConfig
+
 import TestUtil._
 
 @RunWith(classOf[JUnitRunner])
@@ -39,7 +41,7 @@ class SourcesApplicationSpec extends Specification {
 
     "get a list of stations" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld")).get
-      contentAsString(response) must contain ("SensorSystem")
+      contentAsString(response) must contain (StationConfig.typeName)
     }
 
     "get a specific station" in new WithApplication(TestUtil.app) {
@@ -78,7 +80,7 @@ class SourcesApplicationSpec extends Specification {
 
     "get a list of stations with fields specified" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld?fields=id,country")).get
-      contentAsString(response) must contain ("SensorSystem")
+      contentAsString(response) must contain (StationConfig.typeName)
     }
 
     "return error if unsupported fields are specified" in new WithApplication(TestUtil.app) {

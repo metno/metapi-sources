@@ -59,7 +59,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
               ids: Option[String],
     @ApiParam(value = "The type of MET API source that you want metadata for.",
               required = false,
-              allowableValues = "SensorSystem")
+              allowableValues = "SensorSystem,InterpolatedDataset")
               types: Option[String],
     @ApiParam(value = "Get MET API sources defined by a specified geometry. Geometries are specified as either a POINT or POLYGON using <a href='https://en.wikipedia.org/wiki/Well-known_text'>WKT</a>; see the reference section on the <a href=reference/index.html#geometry_specification>Geometry Specification</a> for documentation and examples.",
               required = false)
@@ -97,15 +97,15 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
       // ensure that the query string contains supported fields only
       QueryStringUtil.ensureSubset(Set("ids", "types", "geometry", "validtime", "name", "country", "fields"), request.queryString.keySet)
 
-      val sourceList = SourceSpecification.parse(ids)
+      val srcSpec = SourceSpecification(ids, types)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
-      sourceAccess.getStations(sourceList, types, geometry, validtime, name, country, fieldList)
+
+      sourceAccess.getSources(srcSpec.stationNumbers, srcSpec.idfGridNames, geometry, validtime, name, country, fieldList)
+
     } match {
       case Success(data) =>
         if (data isEmpty) {
-          Error.error(NOT_FOUND,
-            Some("No data found for this combination of query parameters"),
-            Some("Try to leave out some or all query parameters to see what combinations are possible"), start)
+          Error.error(NOT_FOUND, Some("No data found for this combination of query parameters"), None, start)
         } else {
           format.toLowerCase() match {
             case "jsonld" => Ok(JsonFormat.format(start, data)) as "application/vnd.no.met.data.sources-v0+json"

@@ -33,12 +33,13 @@ import models.Source
  */
 abstract class SourceAccess {
 
-  def getStations(ids: Seq[String],
-                  types: Option[String],
-                  geometry: Option[String],
-                  validTime: Option[String],
-                  name: Option[String],
-                  country: Option[String],
-                  fields: Set[String]): List[Source]
+  def getSources(
+    stationIds: Seq[String],
+    idfGridIds: Seq[String],
+    geometry: Option[String],
+    validTime: Option[String],
+    name: Option[String],
+    country: Option[String],
+    fields: Set[String]): List[Source]
 
 }

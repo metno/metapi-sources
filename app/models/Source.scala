@@ -54,12 +54,12 @@ extends BasicResponse( context, responseType, apiVersion, license, createdAt, qu
 
 @ApiModel(description="Metadata for a single source.")
 case class Source(
-  @(ApiModelProperty @field)(name="@type", value="The source type of the Source.", example="SensorPlatform") sType: String,
+  @(ApiModelProperty @field)(name="@type", value="The source type of the Source.", example="SensorSystem") sType: String,
   @(ApiModelProperty @field)(value="The MET API id of the source.", example="SN18700") id: Option[String],
   @(ApiModelProperty @field)(value="The name of the source.", example="OSLO - BLINDERN") name: Option[String],
   @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway") country: Option[String],
   @(ApiModelProperty @field)(value="The ISO 3166-1 alpha-2 code of the country.", example="NO") countryCode: Option[String],
-  @(ApiModelProperty @field)(value="The assigned WMO number for a SensorPlatform, if one exists.", example="1492") wmoIdentifier: Option[Int],
+  @(ApiModelProperty @field)(value="The assigned WMO number for a SensorSystem, if one exists.", example="1492") wmoIdentifier: Option[Int],
   @(ApiModelProperty @field)(value="Spatial location data for the source.") geometry: Option[Point],
   @(ApiModelProperty @field)(value="The level of the source.", example="74") levels: Option[Seq[Level]],
   @(ApiModelProperty @field)(value="The datetime from which the source is valid.", example="1974-05-29T00:00:00Z") validFrom: Option[String],

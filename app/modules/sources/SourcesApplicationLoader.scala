@@ -38,7 +38,7 @@ import services.sources._
 class SourcesProdModule extends AbstractModule {
 
   def configure() {
-    bind(classOf[SourceAccess]).to(classOf[StinfosysAccess])
+    bind(classOf[SourceAccess]).to(classOf[ProdSourceAccess])
   }
 
 }
