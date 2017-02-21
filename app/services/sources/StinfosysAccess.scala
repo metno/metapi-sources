@@ -52,17 +52,19 @@ class StinfosysAccess extends SourceAccess {
     get[Option[String]]("id") ~
     get[Option[String]]("name") ~
     get[Option[String]]("country") ~
+    get[Option[String]]("countryCode") ~
     get[Option[Int]]("wmoidentifier") ~
     get[Option[Double]]("level") ~
     get[Option[Double]]("lat") ~
     get[Option[Double]]("lon") ~
     get[Option[String]]("validfrom") ~
     get[Option[String]]("validto") map {
-      case sourceid~name~country~wmono~hs~lat~lon~fromDate~toDate =>
+      case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate =>
         Source("SensorPlatform",
                sourceid,
                name,
                country,
+               countryCode,
                wmono,
                if (lon.isEmpty||lat.isEmpty) None else Some(Point(coordinates=Seq(lon.get, lat.get))),
                if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
@@ -72,7 +74,7 @@ class StinfosysAccess extends SourceAccess {
   }
 
   private def getSelectQuery(fields: Set[String]) : String = {
-    val legalFields = Set("id", "name", "country", "wmoidentifier", "geometry", "level", "validfrom", "validto")
+    val legalFields = Set("id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto")
     val illegalFields = fields -- legalFields
     if (illegalFields.nonEmpty) {
       throw new BadRequestException(
@@ -91,14 +93,23 @@ class StinfosysAccess extends SourceAccess {
     }
   }
 
-
+  // Converts a string to use '%' for trailing wildcard instead of '*'.
   private def replaceTrailingWildcard(s: String): String = {
     if (s.nonEmpty && (s.last == '*')) s.updated(s.length - 1, '%') else s
   }
 
+  // Generates a WHERE clause using a prepared filter that matches a single attribute.
   private def preparedFilterQ(attr: String, value: Option[String], placeholder: String): String = {
     value match {
-      case Some(s) if s.nonEmpty => s"lower($attr) LIKE lower({$placeholder})"
+      case Some(s) if s.nonEmpty => s"(lower($attr) LIKE lower({$placeholder}))"
+      case _ => "TRUE"
+    }
+  }
+
+  // Generates a WHERE clause using a prepared filter that matches any of two attributes.
+  private def preparedFilterQ2(attr1: String, attr2: String, value: Option[String], placeholder: String): String = {
+    value match {
+      case Some(s) if s.nonEmpty => s"(${preparedFilterQ(attr1, value, placeholder)} OR ${preparedFilterQ(attr2, value, placeholder)})"
       case _ => "TRUE"
     }
   }
@@ -119,7 +130,7 @@ class StinfosysAccess extends SourceAccess {
     }
 
     val nameQ = preparedFilterQ("s.name", name, "nameFilter")
-    val countryQ = preparedFilterQ("c.name", country, "countryFilter")
+    val countryQ = preparedFilterQ2("c.name", "c.alias", country, "countryFilter")
 
     val query = if (geometry.isEmpty) {
       s"""
@@ -127,7 +138,7 @@ class StinfosysAccess extends SourceAccess {
         |$selectQ
       |FROM
         |(SELECT
-          |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level,
+          |'SN'|| stationid AS id, s.name AS name, c.name AS country, c.alias AS countryCode, wmono AS wmoidentifier, hs AS level,
           |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
         |FROM
           |station s, country c
@@ -148,7 +159,7 @@ class StinfosysAccess extends SourceAccess {
           |$selectQ
         |FROM
           |(SELECT
-            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level,
+            |'SN'|| stationid AS id, s.name AS name, c.name AS country, c.alias AS countryCode, wmono AS wmoidentifier, hs AS level,
             |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
           |FROM
             |station s, country c
@@ -168,7 +179,7 @@ class StinfosysAccess extends SourceAccess {
           |$selectQ
         |FROM
           |(SELECT
-            |'SN'|| stationid AS id, s.name AS name, c.name AS country, wmono AS wmoidentifier, hs AS level,
+            |'SN'|| stationid AS id, s.name AS name, c.name AS country, c.alias AS countryCode, wmono AS wmoidentifier, hs AS level,
             |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
           |FROM
             | station s, country c

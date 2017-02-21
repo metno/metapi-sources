@@ -70,7 +70,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources whose 'name' attribute matches this filter may occur in the result. An optional wildcard asterisk may be specified at the end (e.g. 'lille*' would match 'Lillehammer').",
               required = false)
               name: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'country' attribute matches this filter may occur in the result. An optional wildcard asterisk may be specified at the end (e.g. 'fin*' would match 'Finland').",
+    @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this filter may occur in the result. An optional wildcard asterisk may be specified at the end (e.g. 'fin*' would match 'Finland').",
               required = false)
               country: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set. Note that the @type context is always included and cannot be filtered out.",
