@@ -27,6 +27,7 @@ package services.sources
 
 import play.api._
 import models.Source
+import no.met.data._
 
 /**
  * Abstract class for SourceAccess injection
@@ -34,12 +35,21 @@ import models.Source
 abstract class SourceAccess {
 
   def getSources(
-    stationIds: Seq[String],
-    idfGridIds: Seq[String],
+    srcSpec: SourceSpecification,
     geometry: Option[String],
     validTime: Option[String],
     name: Option[String],
     country: Option[String],
     fields: Set[String]): List[Source]
 
+
+  // The following functions return true iff the source type in question is to be included in the output.
+
+  protected def includeStationSources(srcSpec: SourceSpecification): Boolean = // type 1
+    srcSpec.typeAllowed(StationConfig.typeName) && (srcSpec.isEmpty || srcSpec.stationNames.nonEmpty)
+
+  protected def includeIdfGridSources(srcSpec: SourceSpecification): Boolean = // type 2
+    srcSpec.typeAllowed(IDFGridConfig.typeName) && (srcSpec.isEmpty || srcSpec.idfGridNames.nonEmpty)
+
+  // type 3 ...
 }

@@ -211,13 +211,12 @@ class ProdSourceAccess extends SourceAccess {
 
 
   private object GridIDFExec {
-    def apply(
-      stationIds: Seq[String], idfGridIds: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
-      country: Option[String], fields: Set[String]): List[Source] = {
 
-      if ((stationIds.nonEmpty || idfGridIds.nonEmpty) && !idfGridIds.contains(IDFGridConfig.name)) {
-        throw new BadRequestException(s"Supported name for gridded dataset (${IDFGridConfig.name}) not found in ids")
-      }
+    def apply(idfGridIds: Seq[String], fields: Set[String]): List[Source] = {
+
+      assert(idfGridIds.isEmpty || ((idfGridIds.length == 1) && (idfGridIds(0) == IDFGridConfig.name))) // for now
+
+      // filter on fields ... TBD
 
       List(Source(
         IDFGridConfig.typeName,
@@ -236,16 +235,23 @@ class ProdSourceAccess extends SourceAccess {
 
 
   def getSources(
-    stationIds: Seq[String], idfGridIds: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
+    srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String],
     country: Option[String], fields: Set[String]): List[Source] = {
 
-    if (stationIds.nonEmpty && idfGridIds.isEmpty) { // collect for sensor system
-      STInfoSysExec(stationIds, geometry, validTime, name, country, fields)
-    } else if (stationIds.isEmpty && idfGridIds.nonEmpty) { // collect for interpolated dataset
-      GridIDFExec(stationIds, idfGridIds, geometry, validTime, name, country, fields)
-    } else { // collect for both types
-      STInfoSysExec(stationIds, geometry, validTime, name, country, fields) ++ GridIDFExec(stationIds, idfGridIds, geometry, validTime, name, country, fields)
+    var sources = List[Source]()
+
+    if (includeStationSources(srcSpec)) { // type 1
+      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, fields)
     }
+
+    if (includeIdfGridSources(srcSpec)) { // type 2
+      sources = sources ++ GridIDFExec(srcSpec.idfGridNames, fields)
+    }
+
+    // type 3 ...
+
+
+    sources
   }
 
 }

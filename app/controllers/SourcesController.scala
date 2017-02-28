@@ -100,7 +100,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
       val srcSpec = SourceSpecification(ids, types)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
 
-      sourceAccess.getSources(srcSpec.stationNumbers, srcSpec.idfGridNames, geometry, validtime, name, country, fieldList)
+      sourceAccess.getSources(srcSpec, geometry, validtime, name, country, fieldList)
 
     } match {
       case Success(data) =>
