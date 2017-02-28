@@ -30,7 +30,7 @@ import org.junit.runner._
 import play.api.test._
 import play.api.test.Helpers._
 import play.api.libs.json._
-import no.met.data.StationConfig
+import no.met.data._
 
 import TestUtil._
 
@@ -42,6 +42,7 @@ class SourcesApplicationSpec extends Specification {
     "get a list of stations" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld")).get
       contentAsString(response) must contain (StationConfig.typeName)
+      contentAsString(response) must contain (IDFGridConfig.typeName)
     }
 
     "get a specific station" in new WithApplication(TestUtil.app) {
@@ -83,10 +84,65 @@ class SourcesApplicationSpec extends Specification {
       contentAsString(response) must contain (StationConfig.typeName)
     }
 
-    "return error if unsupported fields are specified" in new WithApplication(TestUtil.app) {
-      val response = route(FakeRequest(GET, "/v0.jsonld?foo=bar")).get
+    "allow matching type 1 (1)" in new WithApplication(TestUtil.app) {
+      val id = "SN4200"
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}types=SensorSystem")).get
+      contentAsString(response) must contain (id)
+    }
 
+    "allow matching type 1 (2)" in new WithApplication(TestUtil.app) {
+      val id = "SN4200"
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}&types=SensorSystem,InterpolatedDataset")).get
+      contentAsString(response) must contain (id)
+    }
+
+    "allow matching type 2 (1)" in new WithApplication(TestUtil.app) {
+      val id = IDFGridConfig.name
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}&types=InterpolatedDataset")).get
+      contentAsString(response) must contain (id)
+    }
+
+    "allow matching type 2 (2)" in new WithApplication(TestUtil.app) {
+      val id = IDFGridConfig.name
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}&types=SensorSystem,InterpolatedDataset")).get
+      contentAsString(response) must contain (id)
+    }
+
+    "fail on specifying unsupported type" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/v0.jsonld?types=foobar")).get
       status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "fail on specifying unsupported type 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=SN4200&types=SensorSystem,foobar")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "fail on specifying unsupported type 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${IDFGridConfig.name}&types=InterpolatedDataset,foobar")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "fail on requesting wrong type 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${IDFGridConfig.name}&types=SensorSystem")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "fail on requesting wrong type 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=SN1234&types=InterpolatedDataset")).get
+      status(response) must equalTo(BAD_REQUEST)
+    }
+
+    "return only specific type 1" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/v0.jsonld?types=SensorSystem")).get
+      contentAsString(response) must contain (StationConfig.typeName)
+      contentAsString(response) must not contain IDFGridConfig.typeName
+    }
+
+    "return only specific type 2" in new WithApplication(TestUtil.app) {
+      val response = route(FakeRequest(GET, "/v0.jsonld?types=InterpolatedDataset")).get
+      contentAsString(response) must not contain StationConfig.typeName
+      contentAsString(response) must contain (IDFGridConfig.typeName)
     }
 
   }
