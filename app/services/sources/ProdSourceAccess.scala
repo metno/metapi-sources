@@ -127,7 +127,7 @@ class ProdSourceAccess extends SourceAccess {
 
       // Filter by source id
       val idsQ = if (ids.nonEmpty) {
-        val idStr = SourceSpecification.sql(ids, "stationid", None)
+        val idStr = SourceSpecification.stationWhereClause(ids, "stationid", None)
         s"($idStr)"
       } else {
         "TRUE"
