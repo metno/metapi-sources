@@ -240,11 +240,11 @@ class ProdSourceAccess extends SourceAccess {
 
     var sources = List[Source]()
 
-    if (includeStationSources(srcSpec)) { // type 1
+    if (srcSpec.includeStationSources) { // type 1
       sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, fields)
     }
 
-    if (includeIdfGridSources(srcSpec)) { // type 2
+    if (srcSpec.includeIdfGridSources) { // type 2
       sources = sources ++ GridIDFExec(srcSpec.idfGridNames, fields)
     }
 

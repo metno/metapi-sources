@@ -59,12 +59,12 @@ class MockSourceAccess extends SourceAccess {
 
     var sources = List[Source]()
 
-    if (includeStationSources(srcSpec)) { // type 1
+    if (srcSpec.includeStationSources) { // type 1
       val stationIds = srcSpec.stationNumbers
       sources = sources ++ stationSources.filter(s => stationIds.isEmpty || stationIds.contains(s.id.get))
     }
 
-    if (includeIdfGridSources(srcSpec)) { // type 2
+    if (srcSpec.includeIdfGridSources) { // type 2
       val idfGridIds = srcSpec.idfGridNames
       sources = sources ++ idfGridSources.filter(s => idfGridIds.isEmpty || idfGridIds.contains(s.id.get))
     }

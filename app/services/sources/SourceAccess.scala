@@ -41,15 +41,4 @@ abstract class SourceAccess {
     name: Option[String],
     country: Option[String],
     fields: Set[String]): List[Source]
-
-
-  // The following functions return true iff the source type in question is to be included in the output.
-
-  protected def includeStationSources(srcSpec: SourceSpecification): Boolean = // type 1
-    srcSpec.typeAllowed(StationConfig.typeName) && (srcSpec.isEmpty || srcSpec.stationNames.nonEmpty)
-
-  protected def includeIdfGridSources(srcSpec: SourceSpecification): Boolean = // type 2
-    srcSpec.typeAllowed(IDFGridConfig.typeName) && (srcSpec.isEmpty || srcSpec.idfGridNames.nonEmpty)
-
-  // type 3 ...
 }
