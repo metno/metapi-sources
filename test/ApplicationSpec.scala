@@ -81,31 +81,36 @@ class SourcesApplicationSpec extends Specification {
 
     "get a list of stations with fields specified" in new WithApplication(TestUtil.app) {
       val response = route(FakeRequest(GET, "/v0.jsonld?fields=id,country")).get
+      status(response) must equalTo(OK)
       contentAsString(response) must contain (StationConfig.typeName)
     }
 
     "allow matching type 1 (1)" in new WithApplication(TestUtil.app) {
-      val id = "SN4200"
-      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}types=SensorSystem")).get
-      contentAsString(response) must contain (id)
+      val id = "4200"
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=SN${id}&types=SensorSystem")).get
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}${id}${'"'}")
     }
 
     "allow matching type 1 (2)" in new WithApplication(TestUtil.app) {
-      val id = "SN4200"
-      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}&types=SensorSystem,InterpolatedDataset")).get
-      contentAsString(response) must contain (id)
+      val id = "4200"
+      val response = route(FakeRequest(GET, s"/v0.jsonld?ids=SN${id}&types=SensorSystem,InterpolatedDataset")).get
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}${id}${'"'}")
     }
 
     "allow matching type 2 (1)" in new WithApplication(TestUtil.app) {
       val id = IDFGridConfig.name
       val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}&types=InterpolatedDataset")).get
-      contentAsString(response) must contain (id)
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}${id}${'"'}")
     }
 
     "allow matching type 2 (2)" in new WithApplication(TestUtil.app) {
       val id = IDFGridConfig.name
       val response = route(FakeRequest(GET, s"/v0.jsonld?ids=${id}&types=SensorSystem,InterpolatedDataset")).get
-      contentAsString(response) must contain (id)
+      status(response) must equalTo(OK)
+      contentAsString(response) must contain (s"${'"'}${id}${'"'}")
     }
 
     "fail on specifying unsupported type" in new WithApplication(TestUtil.app) {
