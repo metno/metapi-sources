@@ -248,7 +248,7 @@ class ProdSourceAccess extends SourceAccess {
       sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, fields)
     }
 
-    if (srcSpec.includeIdfGridSources) { // type 2
+    if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2
       sources = sources ++ GridIDFExec(srcSpec.idfGridNames, fields)
     }
 
