@@ -50,6 +50,7 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ "wmoIdentifier").writeNullable[Int] and
     (JsPath \ "geometry").writeNullable[Point] and
     (JsPath \ "levels").writeNullable[Seq[Level]] and
+    (JsPath \ "idfAvailable").writeNullable[Boolean] and
     (JsPath \ "validFrom").writeNullable[String] and
     (JsPath \ "validTo").writeNullable[String]
   )(unlift(Source.unapply))

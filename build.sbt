@@ -28,6 +28,7 @@ libraryDependencies ++= Seq(
   "io.swagger" %% "swagger-play2" % "1.5.2",
   "no.met.data" %% "util" % "0.3-SNAPSHOT",
   "no.met.data" %% "auth" % "0.3-SNAPSHOT",
+  "no.met.data" %% "frequencies" % "0.3-SNAPSHOT",
   specs2 % Test
 )
 
