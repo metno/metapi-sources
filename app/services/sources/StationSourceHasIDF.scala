@@ -41,7 +41,7 @@ object StationSourceHasIDF {
   private def nowSecs: Long = System.currentTimeMillis / 1000  // current time since 1970 in seconds.
 
   private def refresh() = {
-    val idfStationSources: List[RainfallIDFSource] = idfAccess.idfSources(QueryParameters(None, Some("SensorSystem"))
+    val idfStationSources: List[RainfallIDFSource] = idfAccess.idfSources(QueryParameters(None, Some("SensorSystem")))
     stationsWithIDF = idfStationSources.map(s => s.sourceId).toSet
     lastRefresh = nowSecs
   }
