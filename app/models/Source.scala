@@ -62,7 +62,6 @@ case class Source(
   @(ApiModelProperty @field)(value="The assigned WMO number for a SensorSystem, if one exists.", example="1492") wmoIdentifier: Option[Int],
   @(ApiModelProperty @field)(value="Spatial location data for the source.") geometry: Option[Point],
   @(ApiModelProperty @field)(value="The level of the source.", example="74") levels: Option[Seq[Level]],
-  @(ApiModelProperty @field)(value="Whether IDF data is available.", example="true") idfAvailable: Option[Boolean],
   @(ApiModelProperty @field)(value="The datetime from which the source is valid.", example="1974-05-29T00:00:00Z") validFrom: Option[String],
   @(ApiModelProperty @field)(value="The datetime to which the source was valid (if no longer valid).", example="2006-09-01T00:00:00Z") validTo: Option[String]
 )

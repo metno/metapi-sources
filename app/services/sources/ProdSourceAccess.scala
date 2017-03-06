@@ -62,8 +62,7 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[Double]]("lon") ~
         get[Option[String]]("validfrom") ~
         get[Option[String]]("validto") map {
-        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate => {
-          val idfAvailable = StationSourceHasIDF(sourceid.getOrElse("")) // TBD: consider this too should be filterable through the fields query param
+        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate =>
           Source(
             "SensorSystem",
             sourceid,
@@ -73,10 +72,8 @@ class ProdSourceAccess extends SourceAccess {
             wmono,
             if (lon.isEmpty || lat.isEmpty) None else Some(Point(coordinates = Seq(lon.get, lat.get))),
             if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
-            Some(idfAvailable),
             fromDate,
             toDate)
-        }
       }
     }
 
@@ -230,7 +227,6 @@ class ProdSourceAccess extends SourceAccess {
         None, // WMO ID n/a
         None, // point n/a
         None, // levels n/a
-        Some(true), // IDF available
         Some(IDFGridConfig.validFrom),
         Some(IDFGridConfig.validTo)
       ))
