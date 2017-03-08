@@ -40,6 +40,8 @@ import scala.util._
 import no.met.data._
 import no.met.geometry._
 import models._
+import org.joda.time.format.{ DateTimeFormatter, DateTimeFormat, ISODateTimeFormat }
+import org.joda.time.DateTime
 
 
 //$COVERAGE-OFF$ Not testing database queries
@@ -77,8 +79,8 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
-  private def getSelectQuery(fields: Set[String]) : String = {
-    val legalFields = Set("id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto")
+    private def getSelectQuery(fields: Set[String]): String = {
+      val legalFields = Set("id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(
@@ -94,6 +96,24 @@ class ProdSourceAccess extends SourceAccess {
       else {
         val missingStr = missing.map(x => "NULL AS " + x).mkString(", ").replace("NULL AS geometry", "NULL AS lat, NULL AS LON")
         fieldStr + "," + missingStr
+      }
+    }
+
+    private val dateFormat = "YYYY-MM-DD"
+    private val dtFormatter: DateTimeFormatter = DateTimeFormat.forPattern(dateFormat)
+
+    private def dateExpression(dt: DateTime): String = s"TO_DATE('${dtFormatter.print(dt)}', '$dateFormat')"
+
+    private def intervalInclusionQuery(d0: String, d1: String): String = s"s.fromtime <= $d1 AND (s.totime IS NULL OR $d0 <= s.totime)"
+
+    private def getValidTimeQuery(validTime: Option[String]): String = {
+      val currDateExpr = "CURRENT_DATE"
+      val vtspec = ValidTimeSpecification(validTime.getOrElse("now"))
+      (vtspec.fromDateTime, vtspec.toDateTime) match {
+        case (None, None) => intervalInclusionQuery(currDateExpr, currDateExpr)
+        case (None, Some(dt)) => { val d = dateExpression(dt); intervalInclusionQuery(d, d) }
+        case (Some(dt0), None) => intervalInclusionQuery(dateExpression(dt0), currDateExpr)
+        case (Some(dt0), Some(dt1)) => intervalInclusionQuery(dateExpression(dt0), dateExpression(dt1))
       }
     }
 
@@ -133,6 +153,7 @@ class ProdSourceAccess extends SourceAccess {
         "TRUE"
       }
 
+      val validTimeQ = getValidTimeQuery(validTime)
       val nameQ = preparedFilterQ("s.name", name, "nameFilter")
       val countryQ = preparedFilterQ2("c.name", "c.alias", country, "countryFilter")
 
@@ -149,7 +170,7 @@ class ProdSourceAccess extends SourceAccess {
           |WHERE
             |$idsQ
             |AND c.countryid = s.countryid
-            |AND s.totime is null
+            |AND $validTimeQ
             |AND $nameQ
             |AND $countryQ
           |ORDER BY
@@ -167,11 +188,11 @@ class ProdSourceAccess extends SourceAccess {
             |FROM
               |station s, country c
             |WHERE
-              |$idsQ AND
-              |c.countryid = s.countryid AND
-              |s.totime is null AND
-              |$nameQ AND
-              |$countryQ
+              |$idsQ
+              |AND c.countryid = s.countryid
+              |AND $validTimeQ
+              |AND $nameQ
+              |AND $countryQ
             |ORDER BY
               |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), id
             |LIMIT 1) t0""".stripMargin
@@ -186,12 +207,12 @@ class ProdSourceAccess extends SourceAccess {
             |FROM
               |station s, country c
             |WHERE
-              |$idsQ AND
-              |c.countryid = s.countryid AND
-              |s.totime is null AND
-              |$nameQ AND
-              |$countryQ AND
-              |ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
+              |$idsQ
+              |AND c.countryid = s.countryid
+              |AND $validTimeQ
+              |AND $nameQ
+              |AND $countryQ
+              |AND ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
             |ORDER BY
               |id) t0""".stripMargin
         }
@@ -212,24 +233,43 @@ class ProdSourceAccess extends SourceAccess {
 
   private object GridIDFExec {
 
-    def apply(idfGridIds: Seq[String], fields: Set[String]): List[Source] = {
+    private val dtFormatter: DateTimeFormatter = ISODateTimeFormat.dateTimeNoMillis
+    private val validFrom: DateTime = dtFormatter.parseDateTime(IDFGridConfig.validFrom)
+    private val validTo: DateTime = dtFormatter.parseDateTime(IDFGridConfig.validTo)
 
-      assert(idfGridIds.isEmpty || ((idfGridIds.length == 1) && (idfGridIds(0) == IDFGridConfig.name))) // for now
+    def apply(idfGridIds: Seq[String], validTime: Option[String], fields: Set[String]): List[Source] = {
 
-      // filter on fields ... TBD
+      assert(idfGridIds.isEmpty || ((idfGridIds.length == 1) && (idfGridIds.head == IDFGridConfig.name))) // for now
 
-      List(Source(
-        IDFGridConfig.typeName,
-        Some(IDFGridConfig.name),
-        None, // name n/a
-        None, // country n/a
-        None, // countryCode n/a
-        None, // WMO ID n/a
-        None, // point n/a
-        None, // levels n/a
-        Some(IDFGridConfig.validFrom),
-        Some(IDFGridConfig.validTo)
-      ))
+      val include = {
+        val vtspec = ValidTimeSpecification(validTime.getOrElse("now"))
+
+        val currDate: DateTime = null
+        (vtspec.fromDateTime, vtspec.toDateTime) match {
+          case (None, None) => !validFrom.isAfterNow && !validTo.isBeforeNow // validFrom_<=_CURRDATE_<=_validTo
+          case (None, Some(dt)) => !validFrom.isAfter(dt) && !validTo.isBefore(dt) // validFrom_<=_dt_<=_validTo
+          case (Some(dt0), None) => !dt0.isAfter(validTo) // dt0_<=_validTo
+          case (Some(dt0), Some(dt1)) => !validFrom.isAfter(dt1) && !validTo.isBefore(dt0) // validFrom_<=_dt1_AND_dt0_<=_validTo
+        }
+      }
+
+      if (include) {
+        // filter on fields ... TBD
+        List(Source(
+          IDFGridConfig.typeName,
+          Some(IDFGridConfig.name),
+          None, // name n/a
+          None, // country n/a
+          None, // countryCode n/a
+          None, // WMO ID n/a
+          None, // point n/a
+          None, // levels n/a
+          Some(IDFGridConfig.validFrom),
+          Some(IDFGridConfig.validTo)
+        ))
+      } else {
+        List[Source]()
+      }
     }
   }
 
@@ -245,7 +285,7 @@ class ProdSourceAccess extends SourceAccess {
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2
-      sources = sources ++ GridIDFExec(srcSpec.idfGridNames, fields)
+      sources = sources ++ GridIDFExec(srcSpec.idfGridNames, validTime, fields)
     }
 
     // type 3 ...

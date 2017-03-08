@@ -64,7 +64,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "Get MET API sources defined by a specified geometry. Geometries are specified as either a POINT or POLYGON using <a href='https://en.wikipedia.org/wiki/Well-known_text'>WKT</a>; see the reference section on the <a href=reference/index.html#geometry_specification>Geometry Specification</a> for documentation and examples.",
               required = false)
               geometry: Option[String],
-    @ApiParam(value = "The time during which the MET API source must be valid (i.e., operational).",
+    @ApiParam(value = "The MET API source must be valid/applicable during this interval (or a part of it). Specify <date>/<date>, <date>/now, <date>, or now, where <date> is of the form YYYY-MM-DD, e.g. 2017-03-06. The default is 'now', i.e. only currently valid/applicable sources are included.",
               required = false)
               validtime: Option[String],
     @ApiParam(value = "If specified, only sources whose 'name' attribute matches this filter may occur in the result. An optional wildcard asterisk may be specified at the end (e.g. 'lille*' would match 'Lillehammer').",
