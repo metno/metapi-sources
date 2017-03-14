@@ -38,6 +38,7 @@ import scala.concurrent._
 import scala.language.postfixOps
 import scala.util._
 import no.met.data._
+import no.met.data.AnormUtil._
 import no.met.geometry._
 import models._
 import org.joda.time.format.{ DateTimeFormatter, DateTimeFormat, ISODateTimeFormat }
@@ -122,22 +123,6 @@ class ProdSourceAccess extends SourceAccess {
       if (s.nonEmpty && (s.last == '*')) s.updated(s.length - 1, '%') else s
     }
 
-    // Generates a WHERE clause using a prepared filter that matches a single attribute.
-    private def preparedFilterQ(attr: String, value: Option[String], placeholder: String): String = {
-      value match {
-        case Some(s) if s.nonEmpty => s"(lower($attr) LIKE lower({$placeholder}))"
-        case _ => "TRUE"
-      }
-    }
-
-    // Generates a WHERE clause using a prepared filter that matches any of two attributes.
-    private def preparedFilterQ2(attr1: String, attr2: String, value: Option[String], placeholder: String): String = {
-      value match {
-        case Some(s) if s.nonEmpty => s"(${preparedFilterQ(attr1, value, placeholder)} OR ${preparedFilterQ(attr2, value, placeholder)})"
-        case _ => "TRUE"
-      }
-    }
-
     // scalastyle:off method.length
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
@@ -154,8 +139,8 @@ class ProdSourceAccess extends SourceAccess {
       }
 
       val validTimeQ = getValidTimeQuery(validTime)
-      val nameQ = preparedFilterQ("s.name", name, "nameFilter")
-      val countryQ = preparedFilterQ2("c.name", "c.alias", country, "countryFilter")
+      val nameQ = if (name.isEmpty) "TRUE" else "lower(s.name) LIKE lower({name})"
+      val countryQ = if (country.isEmpty) "TRUE" else "(lower(c.name) LIKE lower({country}) OR lower(c.alias) LIKE lower({country}))"
 
       val query = if (geometry.isEmpty) {
         s"""
@@ -221,10 +206,11 @@ class ProdSourceAccess extends SourceAccess {
       //Logger.debug(query)
 
       DB.withConnection("sources") { implicit connection =>
-        SQL(query).on(
-          "nameFilter" -> replaceTrailingWildcard(name.getOrElse("")),
-          "countryFilter" -> replaceTrailingWildcard(country.getOrElse(""))
-        ).as( parser * )
+        val nameList = if (name.isEmpty) List[String]() else List[String](replaceTrailingWildcard(name.get))
+        val countryList = if (country.isEmpty) List[String]() else List[String](replaceTrailingWildcard(country.get))
+        SQL(insertPlaceholders(query, List(("name", nameList.size), ("country", countryList.size))))
+          .on(onArg(List(("name", nameList), ("country", countryList))): _*)
+          .as( parser * )
       }
     }
     // scalastyle:on method.length
