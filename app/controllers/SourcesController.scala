@@ -67,10 +67,10 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources that have been, or still are, valid/applicable during some part of this interval may be included in the result. Specify &lt;date&gt;/&lt;date&gt;, &lt;date&gt;/now, &lt;date&gt;, or now, where &lt;date&gt; is of the form YYYY-MM-DD, e.g. 2017-03-06. The default is 'now', i.e. only currently valid/applicable sources are included.",
               required = false)
               validtime: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'name' attribute matches this filter may be included in the result. An optional wildcard asterisk may be specified at the end (e.g. 'lille*' would match 'Lillehammer').",
+    @ApiParam(value = "If specified, only sources whose 'name' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'li\\*eha\\*' would match 'Lillehammer').",
               required = false)
               name: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this filter may be included in the result. An optional wildcard asterisk may be specified at the end (e.g. 'fin*' would match 'Finland').",
+    @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*in\\*d' would match 'Finland').",
               required = false)
               country: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set. Note that the @type context is always included and cannot be filtered out.",

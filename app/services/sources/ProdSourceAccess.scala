@@ -118,9 +118,9 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
-    // Converts a string to use '%' for trailing wildcard instead of '*'.
-    private def replaceTrailingWildcard(s: String): String = {
-      if (s.nonEmpty && (s.last == '*')) s.updated(s.length - 1, '%') else s
+    // Converts a string to use '%' for wildcards instead of '*'.
+    private def replaceWildcards(s: String): String = {
+      s.replaceAll("\\*", "%")
     }
 
     // scalastyle:off method.length
@@ -206,8 +206,8 @@ class ProdSourceAccess extends SourceAccess {
       //Logger.debug(query)
 
       DB.withConnection("sources") { implicit connection =>
-        val nameList = if (name.isEmpty) List[String]() else List[String](replaceTrailingWildcard(name.get))
-        val countryList = if (country.isEmpty) List[String]() else List[String](replaceTrailingWildcard(country.get))
+        val nameList = if (name.isEmpty) List[String]() else List[String](replaceWildcards(name.get))
+        val countryList = if (country.isEmpty) List[String]() else List[String](replaceWildcards(country.get))
         SQL(insertPlaceholders(query, List(("name", nameList.size), ("country", countryList.size))))
           .on(onArg(List(("name", nameList), ("country", countryList))): _*)
           .as( parser * )
