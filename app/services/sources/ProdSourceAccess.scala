@@ -65,14 +65,14 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[Double]]("lon") ~
         get[Option[String]]("validfrom") ~
         get[Option[String]]("validto") ~
-        get[Option[Int]]("municipid") ~
-        get[Option[String]]("municipname") ~
+        get[Option[Int]]("municipalityid") ~
+        get[Option[String]]("municipalityname") ~
         get[Option[Int]]("countyid") ~
         get[Option[String]]("countyname") map {
-        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipid~municipname~countyid~countyname => {
-          val (munid, munname, cntid, cntname) = municipid match {
-            case Some(x) if x > 0 => (municipid, municipname, countyid, countyname)
-            case _ => (None, None, None, None)
+        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipalityname~countyid~countyname => {
+          val (munid, munname, cntid, cntname) = municipalityid match {
+            case Some(x) if x == 0 => (None, None, None, None)
+            case _ => (municipalityid, municipalityname, countyid, countyname)
           }
           Source(
             "SensorSystem",
@@ -95,7 +95,9 @@ class ProdSourceAccess extends SourceAccess {
     }
 
     private def getSelectQuery(fields: Set[String]): String = {
-      val legalFields = Set("id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto")
+      val legalFields = Set(
+        "id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
+        "municipalityid", "municipalityname", "countyid", "countyname")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(
@@ -104,7 +106,7 @@ class ProdSourceAccess extends SourceAccess {
       }
       val fieldStr = fields.mkString(", ")
         .replace("geometry", "lat, lon")
-      val missing = (legalFields ++ Set("municipid", "municipname", "countyid", "countyname")) -- fields
+      val missing = legalFields -- fields
       if (missing.isEmpty) {
         fieldStr
       }
@@ -153,10 +155,10 @@ class ProdSourceAccess extends SourceAccess {
          lon,
          TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom,
          TO_CHAR(totime, 'YYYY-MM-DD') AS validto,
-         m.municipid AS municipid,
-         m.name AS municipname,
-         (CASE WHEN m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
-         (CASE WHEN m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname
+         m.municipid AS municipalityid,
+         (CASE WHEN m.municipid = 0 THEN NULL ELSE m.name END) AS municipalityname,
+         (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
+         (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname
       """
       val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
