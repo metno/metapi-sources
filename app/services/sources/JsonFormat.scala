@@ -55,7 +55,7 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ "municipalityId").writeNullable[Int] and
     (JsPath \ "municipalityName").writeNullable[String] and
     (JsPath \ "countyId").writeNullable[Int] and
-    (JsPath \ "countyNamee").writeNullable[String]
+    (JsPath \ "countyName").writeNullable[String]
   )(unlift(Source.unapply))
 
   implicit val sourceResponseWrites: Writes[SourceResponse] = (

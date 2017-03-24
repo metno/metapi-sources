@@ -70,8 +70,8 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[Int]]("countyid") ~
         get[Option[String]]("countyname") map {
         case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipid~municipname~countyid~countyname => {
-          val (munid, munname, cntid, cntname) = municipid.get match {
-            case x if x > 0 => (municipid, municipname, countyid, countyname)
+          val (munid, munname, cntid, cntname) = municipid match {
+            case Some(x) if x > 0 => (municipid, municipname, countyid, countyname)
             case _ => (None, None, None, None)
           }
           Source(
@@ -104,7 +104,7 @@ class ProdSourceAccess extends SourceAccess {
       }
       val fieldStr = fields.mkString(", ")
         .replace("geometry", "lat, lon")
-      val missing = legalFields -- fields
+      val missing = (legalFields ++ Set("municipid", "municipname", "countyid", "countyname")) -- fields
       if (missing.isEmpty) {
         fieldStr
       }
