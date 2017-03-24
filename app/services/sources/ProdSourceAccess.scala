@@ -64,8 +64,16 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[Double]]("lat") ~
         get[Option[Double]]("lon") ~
         get[Option[String]]("validfrom") ~
-        get[Option[String]]("validto") map {
-        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate =>
+        get[Option[String]]("validto") ~
+        get[Option[Int]]("municipid") ~
+        get[Option[String]]("municipname") ~
+        get[Option[Int]]("countyid") ~
+        get[Option[String]]("countyname") map {
+        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipid~municipname~countyid~countyname => {
+          val (munid, munname, cntid, cntname) = municipid.get match {
+            case x if x > 0 => (municipid, municipname, countyid, countyname)
+            case _ => (None, None, None, None)
+          }
           Source(
             "SensorSystem",
             sourceid,
@@ -76,7 +84,13 @@ class ProdSourceAccess extends SourceAccess {
             if (lon.isEmpty || lat.isEmpty) None else Some(Point(coordinates = Seq(lon.get, lat.get))),
             if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
             fromDate,
-            toDate)
+            toDate,
+            munid,
+            munname,
+            cntid,
+            cntname
+          )
+        }
       }
     }
 
@@ -128,6 +142,22 @@ class ProdSourceAccess extends SourceAccess {
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
       country: Option[String], fields: Set[String]): List[Source] = {
 
+      val innerSelectQ = """
+        'SN'|| stationid AS id,
+         s.name AS name,
+         c.name AS country,
+         c.alias AS countryCode,
+         wmono AS wmoidentifier,
+         hs AS level,
+         lat,
+         lon,
+         TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom,
+         TO_CHAR(totime, 'YYYY-MM-DD') AS validto,
+         m.municipid AS municipid,
+         m.name AS municipname,
+         (CASE WHEN m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
+         (CASE WHEN m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname
+      """
       val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
       // Filter by source id
@@ -147,14 +177,13 @@ class ProdSourceAccess extends SourceAccess {
         |SELECT
           |$selectQ
         |FROM
-          |(SELECT
-            |'SN'|| stationid AS id, s.name AS name, c.name AS country, c.alias AS countryCode, wmono AS wmoidentifier, hs AS level,
-            |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+          |(SELECT $innerSelectQ
           |FROM
-            |station s, country c
+            |station s, country c, municip m
           |WHERE
             |$idsQ
             |AND c.countryid = s.countryid
+            |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
             |AND $validTimeQ
             |AND $nameQ
             |AND $countryQ
@@ -167,14 +196,13 @@ class ProdSourceAccess extends SourceAccess {
           |SELECT
             |$selectQ
           |FROM
-            |(SELECT
-              |'SN'|| stationid AS id, s.name AS name, c.name AS country, c.alias AS countryCode, wmono AS wmoidentifier, hs AS level,
-              |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+            |(SELECT $innerSelectQ
             |FROM
-              |station s, country c
+              |station s, country c, municip m
             |WHERE
               |$idsQ
               |AND c.countryid = s.countryid
+              |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
               |AND $validTimeQ
               |AND $nameQ
               |AND $countryQ
@@ -186,14 +214,13 @@ class ProdSourceAccess extends SourceAccess {
           |SELECT
             |$selectQ
           |FROM
-            |(SELECT
-              |'SN'|| stationid AS id, s.name AS name, c.name AS country, c.alias AS countryCode, wmono AS wmoidentifier, hs AS level,
-              |lat, lon, TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom, TO_CHAR(totime, 'YYYY-MM-DD') AS validto
+            |(SELECT $innerSelectQ
             |FROM
-              |station s, country c
+              |station s, country c, municip m
             |WHERE
               |$idsQ
               |AND c.countryid = s.countryid
+              |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
               |AND $validTimeQ
               |AND $nameQ
               |AND $countryQ
@@ -251,7 +278,11 @@ class ProdSourceAccess extends SourceAccess {
           None, // point n/a
           None, // levels n/a
           Some(IDFGridConfig.validFrom),
-          Some(IDFGridConfig.validTo)
+          Some(IDFGridConfig.validTo),
+          None, // municipid n/a
+          None, // municipname n/a
+          None, // countyid n/a
+          None // countyname n/a
         ))
       } else {
         List[Source]()
