@@ -61,7 +61,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
               required = false,
               allowableValues = "SensorSystem,InterpolatedDataset")
               types: Option[String],
-    @ApiParam(value = "Get MET API sources defined by a specified geometry. Geometries are specified as either a POINT or POLYGON using <a href='https://en.wikipedia.org/wiki/Well-known_text'>WKT</a>; see the reference section on the <a href=reference/index.html#geometry_specification>Geometry Specification</a> for documentation and examples.",
+    @ApiParam(value = "Get MET API sources defined by a specified geometry. Geometries are specified as either a POINT or POLYGON using <a href='https://en.wikipedia.org/wiki/Well-known_text'>WKT</a>; see the reference section on the <a href=concepts/index.html#geometry_specification>Geometry Specification</a> for documentation and examples.",
               required = false)
               geometry: Option[String],
     @ApiParam(value = "If specified, only sources that have been, or still are, valid/applicable during some part of this interval may be included in the result. Specify &lt;date&gt;/&lt;date&gt;, &lt;date&gt;/now, &lt;date&gt;, or now, where &lt;date&gt; is of the form YYYY-MM-DD, e.g. 2017-03-06. The default is 'now', i.e. only currently valid/applicable sources are included.",
