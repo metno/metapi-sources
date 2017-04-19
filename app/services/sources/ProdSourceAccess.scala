@@ -173,6 +173,7 @@ class ProdSourceAccess extends SourceAccess {
       val validTimeQ = getValidTimeQuery(validTime)
       val nameQ = if (name.isEmpty) "TRUE" else "lower(s.name) LIKE lower({name})"
       val countryQ = if (country.isEmpty) "TRUE" else "(lower(c.name) LIKE lower({country}) OR lower(c.alias) LIKE lower({country}))"
+      val permitQ = "mp.permit NOT IN (3, 4, 6)"
 
       val query = if (geometry.isEmpty) {
         s"""
@@ -181,14 +182,16 @@ class ProdSourceAccess extends SourceAccess {
         |FROM
           |(SELECT $innerSelectQ
           |FROM
-            |station s, country c, municip m
+            |station s, country c, municip m, message_policy mp
           |WHERE
             |$idsQ
             |AND c.countryid = s.countryid
             |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
+            |AND mp.stationid = s.stationid
             |AND $validTimeQ
             |AND $nameQ
             |AND $countryQ
+            |AND $permitQ
           |ORDER BY
             |id) t0""".stripMargin
       } else {
@@ -200,14 +203,16 @@ class ProdSourceAccess extends SourceAccess {
           |FROM
             |(SELECT $innerSelectQ
             |FROM
-              |station s, country c, municip m
+              |station s, country c, municip m, message_policy mp
             |WHERE
               |$idsQ
               |AND c.countryid = s.countryid
               |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
+              |AND mp.stationid = s.stationid
               |AND $validTimeQ
               |AND $nameQ
               |AND $countryQ
+              |AND $permitQ
             |ORDER BY
               |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), id
             |LIMIT 1) t0""".stripMargin
@@ -218,14 +223,16 @@ class ProdSourceAccess extends SourceAccess {
           |FROM
             |(SELECT $innerSelectQ
             |FROM
-              |station s, country c, municip m
+              |station s, country c, municip m, message_policy mp
             |WHERE
               |$idsQ
               |AND c.countryid = s.countryid
               |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
+              |AND mp.stationid = s.stationid
               |AND $validTimeQ
               |AND $nameQ
               |AND $countryQ
+              |AND $permitQ
               |AND ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
             |ORDER BY
               |id) t0""".stripMargin
