@@ -145,7 +145,7 @@ class ProdSourceAccess extends SourceAccess {
       country: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
-        'SN'|| stationid AS id,
+        'SN'|| s.stationid AS id,
          s.name AS name,
          c.name AS country,
          c.alias AS countryCode,
@@ -153,8 +153,8 @@ class ProdSourceAccess extends SourceAccess {
          hs AS level,
          lat,
          lon,
-         TO_CHAR(fromtime, 'YYYY-MM-DD') AS validfrom,
-         TO_CHAR(totime, 'YYYY-MM-DD') AS validto,
+         TO_CHAR(s.fromtime, 'YYYY-MM-DD') AS validfrom,
+         TO_CHAR(s.totime, 'YYYY-MM-DD') AS validto,
          m.municipid AS municipalityid,
          (CASE WHEN m.municipid = 0 THEN NULL ELSE m.name END) AS municipalityname,
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
@@ -164,7 +164,7 @@ class ProdSourceAccess extends SourceAccess {
 
       // Filter by source id
       val idsQ = if (ids.nonEmpty) {
-        val idStr = SourceSpecification.stationWhereClause(ids, "stationid", None)
+        val idStr = SourceSpecification.stationWhereClause(ids, "s.stationid", None)
         s"($idStr)"
       } else {
         "TRUE"
@@ -173,7 +173,7 @@ class ProdSourceAccess extends SourceAccess {
       val validTimeQ = getValidTimeQuery(validTime)
       val nameQ = if (name.isEmpty) "TRUE" else "lower(s.name) LIKE lower({name})"
       val countryQ = if (country.isEmpty) "TRUE" else "(lower(c.name) LIKE lower({country}) OR lower(c.alias) LIKE lower({country}))"
-      val permitQ = "mp.permit NOT IN (3, 4, 6)"
+      val permitQ = "mp.permitid NOT IN (3, 4, 6)"
 
       val query = if (geometry.isEmpty) {
         s"""
