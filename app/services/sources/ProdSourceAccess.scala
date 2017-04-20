@@ -180,7 +180,7 @@ class ProdSourceAccess extends SourceAccess {
         |SELECT
           |$selectQ
         |FROM
-          |(SELECT $innerSelectQ
+          |(SELECT DISTINCT $innerSelectQ
           |FROM
             |station s, country c, municip m, message_policy mp
           |WHERE
@@ -201,7 +201,7 @@ class ProdSourceAccess extends SourceAccess {
           |SELECT
             |$selectQ
           |FROM
-            |(SELECT $innerSelectQ
+            |(SELECT DISTINCT $innerSelectQ
             |FROM
               |station s, country c, municip m, message_policy mp
             |WHERE
@@ -221,7 +221,7 @@ class ProdSourceAccess extends SourceAccess {
           |SELECT
             |$selectQ
           |FROM
-            |(SELECT $innerSelectQ
+            |(SELECT DISTINCT $innerSelectQ
             |FROM
               |station s, country c, municip m, message_policy mp
             |WHERE
