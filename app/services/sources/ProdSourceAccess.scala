@@ -94,6 +94,14 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
+    val restrParser: RowParser[String] = {
+      get[Option[String]]("id") map {
+        case id => {
+          id.get
+        }
+      }
+    }
+
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
         "id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
@@ -173,7 +181,6 @@ class ProdSourceAccess extends SourceAccess {
       val validTimeQ = getValidTimeQuery(validTime)
       val nameQ = if (name.isEmpty) "TRUE" else "lower(s.name) LIKE lower({name})"
       val countryQ = if (country.isEmpty) "TRUE" else "(lower(c.name) LIKE lower({country}) OR lower(c.alias) LIKE lower({country}))"
-      val permitQ = "mp.permitid NOT IN (3, 4, 6)"
 
       val query = if (geometry.isEmpty) {
         s"""
@@ -182,16 +189,14 @@ class ProdSourceAccess extends SourceAccess {
         |FROM
           |(SELECT DISTINCT $innerSelectQ
           |FROM
-            |station s, country c, municip m, message_policy mp
+            |station s, country c, municip m
           |WHERE
             |$idsQ
             |AND c.countryid = s.countryid
             |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
-            |AND mp.stationid = s.stationid
             |AND $validTimeQ
             |AND $nameQ
             |AND $countryQ
-            |AND $permitQ
           |ORDER BY
             |id) t0""".stripMargin
       } else {
@@ -203,16 +208,14 @@ class ProdSourceAccess extends SourceAccess {
           |FROM
             |(SELECT DISTINCT $innerSelectQ
             |FROM
-              |station s, country c, municip m, message_policy mp
+              |station s, country c, municip m
             |WHERE
               |$idsQ
               |AND c.countryid = s.countryid
               |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
-              |AND mp.stationid = s.stationid
               |AND $validTimeQ
               |AND $nameQ
               |AND $countryQ
-              |AND $permitQ
             |ORDER BY
               |ST_SetSRID(ST_MakePoint(lon, lat),4326) <-> ST_GeomFromText('${geom.asWkt}',4326), id
             |LIMIT 1) t0""".stripMargin
@@ -223,16 +226,14 @@ class ProdSourceAccess extends SourceAccess {
           |FROM
             |(SELECT DISTINCT $innerSelectQ
             |FROM
-              |station s, country c, municip m, message_policy mp
+              |station s, country c, municip m
             |WHERE
               |$idsQ
               |AND c.countryid = s.countryid
               |AND m.municipid = (CASE WHEN s.municipid IS NULL THEN 0 ELSE s.municipid END)
-              |AND mp.stationid = s.stationid
               |AND $validTimeQ
               |AND $nameQ
               |AND $countryQ
-              |AND $permitQ
               |AND ST_WITHIN(ST_SetSRID(ST_MakePoint(lon, lat),4326), ST_GeomFromText('${geom.asWkt}',4326))
             |ORDER BY
               |id) t0""".stripMargin
@@ -244,10 +245,15 @@ class ProdSourceAccess extends SourceAccess {
       DB.withConnection("sources") { implicit connection =>
         val nameList = if (name.isEmpty) List[String]() else List[String](replaceWildcards(name.get))
         val countryList = if (country.isEmpty) List[String]() else List[String](replaceWildcards(country.get))
-        SQL(insertPlaceholders(query, List(("name", nameList.size), ("country", countryList.size))))
+        val result = SQL(insertPlaceholders(query, List(("name", nameList.size), ("country", countryList.size))))
           .on(onArg(List(("name", nameList), ("country", countryList))): _*)
           .as( parser * )
+
+        val restricted = SQL("SELECT DISTINCT 'SN' || stationid AS id FROM message_policy WHERE permitid IN (3, 4, 6)").as( restrParser * ).toSet
+
+        result.filter(s => !restricted(s.id.get))
       }
+
     }
     // scalastyle:on method.length
   }
