@@ -52,7 +52,7 @@ class ProdSourceAccess extends SourceAccess {
 
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
-        "id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
+        "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
         "municipalityid", "municipalityname", "countyid", "countyname", "stationholder")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
@@ -60,7 +60,9 @@ class ProdSourceAccess extends SourceAccess {
           "Invalid fields in the query parameter: " + illegalFields.mkString(","),
           Some(s"Supported fields: ${legalFields.mkString(", ")}"))
       }
-      val fieldStr = fields.mkString(", ")
+      val requiredFields = Set("id")
+
+      val fieldStr = (requiredFields ++ fields).mkString(", ")
         .replace("geometry", "lat, lon")
       val missing = legalFields -- fields
       if (missing.isEmpty) {
@@ -278,9 +280,9 @@ class ProdSourceAccess extends SourceAccess {
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           .map(s => Try(stationHolder(s.id.get)) match { // insert any station holders
-            case Success(x) => s.copy(stationHolder = Some(x)) // pass through with only stationHolder modified
-            case _ => s // pass through unmodified (with stationHolder still None)
-          })
+          case Success(x) => s.copy(stationHolder = Some(x)) // pass through with only stationHolder modified
+          case _ => s // pass through unmodified (with stationHolder still None)
+        })
       }
     }
     // scalastyle:on method.length
