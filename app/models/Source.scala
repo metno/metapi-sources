@@ -67,5 +67,6 @@ case class Source(
   @(ApiModelProperty @field)(value="Municipality id.", example="501") municipid: Option[Int],
   @(ApiModelProperty @field)(value="Municipality name.", example="Lillehammer") municipname: Option[String],
   @(ApiModelProperty @field)(value="County id.", example="5") countyid: Option[Int],
-  @(ApiModelProperty @field)(value="County name.", example="Oppland") countyname: Option[String]
+  @(ApiModelProperty @field)(value="County name.", example="Oppland") countyname: Option[String],
+  @(ApiModelProperty @field)(value="Station holder.", example="MET.NO") stationHolder: Option[String]
 )

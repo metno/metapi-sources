@@ -27,22 +27,18 @@ package services.sources
 
 import play.api.Play.current
 import play.api.db._
-import play.api.libs.ws._
 import play.Logger
 import anorm._
 import anorm.SqlParser._
-import java.sql.Connection
 import javax.inject.Singleton
-import scala.annotation.tailrec
-import scala.concurrent._
 import scala.language.postfixOps
-import scala.util._
 import no.met.data._
 import no.met.data.AnormUtil._
 import no.met.geometry._
 import models._
 import org.joda.time.format.{ DateTimeFormatter, DateTimeFormat, ISODateTimeFormat }
 import org.joda.time.DateTime
+import util.{ Try, Failure, Success }
 
 
 //$COVERAGE-OFF$ Not testing database queries
@@ -54,58 +50,10 @@ class ProdSourceAccess extends SourceAccess {
 
   private object STInfoSysExec {
 
-    val parser: RowParser[Source] = {
-      get[Option[String]]("id") ~
-        get[Option[String]]("name") ~
-        get[Option[String]]("country") ~
-        get[Option[String]]("countryCode") ~
-        get[Option[Int]]("wmoidentifier") ~
-        get[Option[Double]]("level") ~
-        get[Option[Double]]("lat") ~
-        get[Option[Double]]("lon") ~
-        get[Option[String]]("validfrom") ~
-        get[Option[String]]("validto") ~
-        get[Option[Int]]("municipalityid") ~
-        get[Option[String]]("municipalityname") ~
-        get[Option[Int]]("countyid") ~
-        get[Option[String]]("countyname") map {
-        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipalityname~countyid~countyname => {
-          val (munid, munname, cntid, cntname) = municipalityid match {
-            case Some(x) if x == 0 => (None, None, None, None)
-            case _ => (municipalityid, municipalityname, countyid, countyname)
-          }
-          Source(
-            "SensorSystem",
-            sourceid,
-            name,
-            country,
-            countryCode,
-            wmono,
-            if (lon.isEmpty || lat.isEmpty) None else Some(Point(coordinates = Seq(lon.get, lat.get))),
-            if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
-            fromDate,
-            toDate,
-            munid,
-            munname,
-            cntid,
-            cntname
-          )
-        }
-      }
-    }
-
-    val restrParser: RowParser[String] = {
-      get[Option[String]]("id") map {
-        case id => {
-          id.get
-        }
-      }
-    }
-
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
         "id", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
-        "municipalityid", "municipalityname", "countyid", "countyname")
+        "municipalityid", "municipalityname", "countyid", "countyname", "stationholder")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(
@@ -145,6 +93,81 @@ class ProdSourceAccess extends SourceAccess {
     // Converts a string to use '%' for wildcards instead of '*'.
     private def replaceWildcards(s: String): String = {
       s.replaceAll("\\*", "%")
+    }
+
+    private def getRestrictedStations: Set[String] = {
+      val parser: RowParser[String] = {
+        get[Option[String]]("stationId") map {
+          case stationId => stationId.get
+        }
+      }
+      val query = "SELECT DISTINCT 'SN' || stationid AS stationId FROM message_policy WHERE permitid IN (3, 4, 6)"
+      DB.withConnection("sources") { implicit connection =>
+        SQL(query).as(parser *).toSet
+      }
+    }
+
+    private def getStationHolders: Map[String, String] = {
+      val parser: RowParser[(String, String)] = {
+        get[Option[String]]("stationId") ~
+          get[Option[String]]("stationHolder") map {
+          case stationId~stationHolder => (stationId.get, stationHolder.get)
+        }
+      }
+      val query =
+        """
+          |SELECT 'SN' || os.stationid AS stationId, o.name AS stationHolder
+          |FROM organisation o, organisation_station os, role r
+          |WHERE o.organisationid=os.organisationid
+          |  AND os.roleid=r.roleid
+          |  AND r.roleid=100 /* code for station holder role */
+          |  AND o.totime IS NULL /* to get current station holders only */
+        """.stripMargin
+      DB.withConnection("sources") { implicit connection =>
+        SQL(query).as(parser *).toMap
+      }
+    }
+
+    private val parser: RowParser[Source] = {
+      get[Option[String]]("id") ~
+        get[Option[String]]("name") ~
+        get[Option[String]]("country") ~
+        get[Option[String]]("countryCode") ~
+        get[Option[Int]]("wmoidentifier") ~
+        get[Option[Double]]("level") ~
+        get[Option[Double]]("lat") ~
+        get[Option[Double]]("lon") ~
+        get[Option[String]]("validfrom") ~
+        get[Option[String]]("validto") ~
+        get[Option[Int]]("municipalityid") ~
+        get[Option[String]]("municipalityname") ~
+        get[Option[Int]]("countyid") ~
+        get[Option[String]]("countyname") map {
+        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipalityname~countyid~countyname => {
+          val (munid, munname, cntid, cntname) = municipalityid match {
+            case Some(x) if x == 0 => (None, None, None, None)
+            case _ => (municipalityid, municipalityname, countyid, countyname)
+          }
+
+          Source(
+            "SensorSystem",
+            sourceid,
+            name,
+            country,
+            countryCode,
+            wmono,
+            if (lon.isEmpty || lat.isEmpty) None else Some(Point(coordinates = Seq(lon.get, lat.get))),
+            if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
+            fromDate,
+            toDate,
+            munid,
+            munname,
+            cntid,
+            cntname,
+            None // station holder - filled in later if applicable
+          )
+        }
+      }
     }
 
     // scalastyle:off method.length
@@ -249,11 +272,16 @@ class ProdSourceAccess extends SourceAccess {
           .on(onArg(List(("name", nameList), ("country", countryList))): _*)
           .as( parser * )
 
-        val restricted = SQL("SELECT DISTINCT 'SN' || stationid AS id FROM message_policy WHERE permitid IN (3, 4, 6)").as( restrParser * ).toSet
+        val restricted = getRestrictedStations
+        val stationHolder = getStationHolders
 
-        result.filter(s => !restricted(s.id.get))
+        result
+          .filter(s => !restricted(s.id.get)) // remove restricted stations
+          .map(s => Try(stationHolder(s.id.get)) match { // insert any station holders
+            case Success(x) => s.copy(stationHolder = Some(x)) // pass through with only stationHolder modified
+            case _ => s // pass through unmodified (with stationHolder still None)
+          })
       }
-
     }
     // scalastyle:on method.length
   }
@@ -297,7 +325,8 @@ class ProdSourceAccess extends SourceAccess {
           None, // municipid n/a
           None, // municipname n/a
           None, // countyid n/a
-          None // countyname n/a
+          None, // countyname n/a
+          None // stationHolder n/a
         ))
       } else {
         List[Source]()
