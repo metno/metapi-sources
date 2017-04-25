@@ -175,7 +175,7 @@ class ProdSourceAccess extends SourceAccess {
     // scalastyle:off method.length
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
-      country: Option[String], fields: Set[String]): List[Source] = {
+      country: Option[String], stationHolder: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
         'SN'|| s.stationid AS id,
@@ -276,17 +276,20 @@ class ProdSourceAccess extends SourceAccess {
           .as( parser * )
 
         val restricted = getRestrictedStations
-        val stationHolder = getStationHolders
-        def finalStationHolder(stationHolder: String): Option[String] = {
-          if (selectQ.contains("NULL AS stationholder")) None else Some(stationHolder)
+        val stationHolders = getStationHolders
+        def finalStationHolder(statHolder: String): Option[String] = {
+          if (selectQ.contains("NULL AS stationholder")) None else Some(statHolder)
         }
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
-          .map(s => Try(stationHolder(s.id.get)) match { // insert any station holders
+          .map(s => Try(stationHolders(s.id.get)) match { // insert any station holders
           case Success(x) => s.copy(stationHolder = finalStationHolder(x)) // pass through with only stationHolder possibly modified
           case _ => s // pass through unmodified (with stationHolder still None)
         })
+          .filter(s => {
+            stationHolder.isEmpty || (s.stationHolder.nonEmpty && s.stationHolder.get.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*")))
+          })
       }
     }
     // scalastyle:on method.length
@@ -343,12 +346,12 @@ class ProdSourceAccess extends SourceAccess {
 
   def getSources(
     srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String],
-    country: Option[String], fields: Set[String]): List[Source] = {
+    country: Option[String], stationHolder: Option[String], fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()
 
     if (srcSpec.includeStationSources) { // type 1
-      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, fields)
+      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, stationHolder, fields)
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2

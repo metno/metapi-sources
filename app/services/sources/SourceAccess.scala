@@ -40,5 +40,6 @@ abstract class SourceAccess {
     validTime: Option[String],
     name: Option[String],
     country: Option[String],
+    stationHolder: Option[String],
     fields: Set[String]): List[Source]
 }
