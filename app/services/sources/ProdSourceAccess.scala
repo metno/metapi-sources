@@ -191,7 +191,8 @@ class ProdSourceAccess extends SourceAccess {
          m.municipid AS municipalityid,
          (CASE WHEN m.municipid = 0 THEN NULL ELSE m.name END) AS municipalityname,
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
-         (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname
+         (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname,
+         NULL AS stationholder
       """
       val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
@@ -276,11 +277,14 @@ class ProdSourceAccess extends SourceAccess {
 
         val restricted = getRestrictedStations
         val stationHolder = getStationHolders
+        def finalStationHolder(stationHolder: String): Option[String] = {
+          if (selectQ.contains("NULL AS stationholder")) None else Some(stationHolder)
+        }
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           .map(s => Try(stationHolder(s.id.get)) match { // insert any station holders
-          case Success(x) => s.copy(stationHolder = Some(x)) // pass through with only stationHolder modified
+          case Success(x) => s.copy(stationHolder = finalStationHolder(x)) // pass through with only stationHolder possibly modified
           case _ => s // pass through unmodified (with stationHolder still None)
         })
       }
