@@ -213,7 +213,7 @@ class ProdSourceAccess extends SourceAccess {
         |SELECT
           |$selectQ
         |FROM
-          |(SELECT DISTINCT $innerSelectQ
+          |(SELECT $innerSelectQ
           |FROM
             |station s, country c, municip m
           |WHERE
@@ -232,7 +232,7 @@ class ProdSourceAccess extends SourceAccess {
           |SELECT
             |$selectQ
           |FROM
-            |(SELECT DISTINCT $innerSelectQ
+            |(SELECT $innerSelectQ
             |FROM
               |station s, country c, municip m
             |WHERE
@@ -250,7 +250,7 @@ class ProdSourceAccess extends SourceAccess {
           |SELECT
             |$selectQ
           |FROM
-            |(SELECT DISTINCT $innerSelectQ
+            |(SELECT $innerSelectQ
             |FROM
               |station s, country c, municip m
             |WHERE
