@@ -277,18 +277,21 @@ class ProdSourceAccess extends SourceAccess {
 
         val restricted = getRestrictedStations
         val stationHolders = getStationHolders
-        def finalStationHolder(statHolder: String): Option[String] = {
-          if (selectQ.contains("NULL AS stationholder")) None else Some(statHolder)
-        }
+        val showStatHolder = selectQ.contains("NULL AS stationholder")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           .map(s => Try(stationHolders(s.id.get)) match { // insert any station holders
-          case Success(x) => s.copy(stationHolder = finalStationHolder(x)) // pass through with only stationHolder possibly modified
-          case _ => s // pass through unmodified (with stationHolder still None)
+          case Success(x) => s.copy(stationHolder = Some(x)) // set station holder
+          case _ => s // leave unmodified
         })
-          .filter(s => {
+          .filter(s => { // remove stations that don't match a specified station holder
             stationHolder.isEmpty || (s.stationHolder.nonEmpty && s.stationHolder.get.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*")))
+          })
+          .map(s => if (showStatHolder) { // remove station holders from output if required
+            s // leave any station holder
+          } else {
+            s.copy(stationHolder = None) // remove any station holder
           })
       }
     }
