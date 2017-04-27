@@ -76,7 +76,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources whose 'stationHolder' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*atens\\*vegves\\*' would match 'STATENS VEGVESEN').",
               required = false)
               stationholder: Option[String],
-    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set. Note that the @type context is always included and cannot be filtered out.",
+    @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set.",
               required = false)
               fields: Option[String],
     //@ApiParam(value = "limit the number of records returned",

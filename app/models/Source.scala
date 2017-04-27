@@ -54,7 +54,7 @@ extends BasicResponse( context, responseType, apiVersion, license, createdAt, qu
 
 @ApiModel(description="Metadata for a single source.")
 case class Source(
-  @(ApiModelProperty @field)(name="@type", value="The source type of the Source.", example="SensorSystem") sType: String,
+  @(ApiModelProperty @field)(name="@type", value="The source type of the Source.", example="SensorSystem") sType: Option[String],
   @(ApiModelProperty @field)(value="The MET API id of the source.", example="SN18700") id: Option[String],
   @(ApiModelProperty @field)(value="The name of the source.", example="OSLO - BLINDERN") name: Option[String],
   @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway") country: Option[String],

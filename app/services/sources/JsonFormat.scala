@@ -42,7 +42,7 @@ import models._
 object JsonFormat extends BasicJsonFormat {
 
   implicit val sourceWrites: Writes[Source] = (
-    (JsPath \ "@type").write[String] and
+    (JsPath \ "@type").writeNullable[String] and
     (JsPath \ "id").writeNullable[String] and
     (JsPath \ "name").writeNullable[String] and
     (JsPath \ "country").writeNullable[String] and

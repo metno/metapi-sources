@@ -52,7 +52,7 @@ class ProdSourceAccess extends SourceAccess {
 
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
-        "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
+        "type", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
         "municipalityid", "municipalityname", "countyid", "countyname", "stationholder")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
@@ -152,7 +152,7 @@ class ProdSourceAccess extends SourceAccess {
           }
 
           Source(
-            "SensorSystem",
+            Some("SensorSystem"),
             sourceid,
             name,
             country,
@@ -178,7 +178,8 @@ class ProdSourceAccess extends SourceAccess {
       country: Option[String], stationHolder: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
-        'SN'|| s.stationid AS id,
+         NULL AS type,
+         'SN'|| s.stationid AS id,
          s.name AS name,
          c.name AS country,
          c.alias AS countryCode,
@@ -277,22 +278,22 @@ class ProdSourceAccess extends SourceAccess {
 
         val restricted = getRestrictedStations
         val stationHolders = getStationHolders
+        val showType = !selectQ.contains("NULL AS type")
         val showStatHolder = !selectQ.contains("NULL AS stationholder")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           .map(s => Try(stationHolders(s.id.get)) match { // insert any station holders
-          case Success(x) => s.copy(stationHolder = Some(x)) // set station holder
-          case _ => s // leave unmodified
-        })
+            case Success(x) => s.copy(stationHolder = Some(x)) // set station holder
+            case _ => s // leave unmodified
+          })
           .filter(s => { // remove stations that don't match a specified station holder
             stationHolder.isEmpty || (s.stationHolder.nonEmpty && s.stationHolder.get.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*")))
           })
-          .map(s => if (showStatHolder) { // remove station holders from output if required
-            s // leave any station holder
-          } else {
-            s.copy(stationHolder = None) // remove any station holder
-          })
+          .map(s => s.copy( // remove fields from output as required
+            sType = if (showType) s.sType else None,
+            stationHolder = if (showStatHolder) s.stationHolder else None
+          ))
       }
     }
     // scalastyle:on method.length
@@ -324,7 +325,7 @@ class ProdSourceAccess extends SourceAccess {
       if (include) {
         // filter on fields ... TBD
         List(Source(
-          IDFGridConfig.typeName,
+          Some(IDFGridConfig.typeName),
           Some(IDFGridConfig.name),
           None, // name n/a
           None, // country n/a
