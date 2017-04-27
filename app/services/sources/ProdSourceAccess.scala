@@ -277,7 +277,7 @@ class ProdSourceAccess extends SourceAccess {
 
         val restricted = getRestrictedStations
         val stationHolders = getStationHolders
-        val showStatHolder = selectQ.contains("NULL AS stationholder")
+        val showStatHolder = !selectQ.contains("NULL AS stationholder")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
