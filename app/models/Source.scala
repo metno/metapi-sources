@@ -47,7 +47,7 @@ case class SourceResponse(
   @(ApiModelProperty @field)(value=ApiConstants.NEXT_LINK, example=ApiConstants.NEXT_LINK_EXAMPLE) nextLink: Option[URL],
   @(ApiModelProperty @field)(value=ApiConstants.PREVIOUS_LINK, example=ApiConstants.PREVIOUS_LINK_EXAMPLE) previousLink: Option[URL],
   @(ApiModelProperty @field)(value=ApiConstants.CURRENT_LINK, example=ApiConstants.CURRENT_LINK_EXAMPLE) currentLink: URL,
-  @(ApiModelProperty @field)(value=ApiConstants.DATA) data: Seq[Source]
+  @(ApiModelProperty @field)(value=ApiConstants.DATA) data: List[Source]
 )
 extends BasicResponse( context, responseType, apiVersion, license, createdAt, queryTime, currentItemCount, itemsPerPage, offset, totalItemCount,
     nextLink, previousLink, currentLink)
@@ -68,5 +68,5 @@ case class Source(
   @(ApiModelProperty @field)(value="Municipality name.", example="Lillehammer") municipname: Option[String],
   @(ApiModelProperty @field)(value="County id.", example="5") countyid: Option[Int],
   @(ApiModelProperty @field)(value="County name.", example="Oppland") countyname: Option[String],
-  @(ApiModelProperty @field)(value="Station holder.", example="MET.NO") stationHolder: Option[String]
+  @(ApiModelProperty @field)(value="Station holders.", example="[ \"MET.NO\", \"STATENS VEGVESEN\" ]") stationHolders: Option[Seq[String]]
 )

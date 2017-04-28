@@ -109,21 +109,30 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
-    private def getStationHolders: Map[String, String] = {
-      val parser: RowParser[(String, String)] = {
+    private def getStationHolders: Map[String, List[String]] = {
+      val parser: RowParser[(String, List[String])] = {
         get[Option[String]]("stationId") ~
-          get[Option[String]]("stationHolder") map {
-          case stationId~stationHolder => (stationId.get, stationHolder.get)
+          get[Option[List[String]]]("stationHolders") map {
+          case stationId~stationHolders => (stationId.get, stationHolders.get)
         }
       }
       val query =
         """
-          |SELECT 'SN' || os.stationid AS stationId, o.name AS stationHolder
-          |FROM organisation o, organisation_station os, role r
-          |WHERE o.organisationid=os.organisationid
-          |  AND os.roleid=r.roleid
-          |  AND r.roleid=100 /* code for station holder role */
-          |  AND o.totime IS NULL /* to get current station holders only */
+          |SELECT 'SN' || stationId AS stationId,
+          |  (SELECT array_agg(name)
+          |   FROM organisation
+          |   WHERE organisationid=ANY(stationHolderIds)
+          |     AND totime IS NULL /* to get current organisation name only */
+          |  ) AS stationHolders
+          |FROM (
+          |  SELECT os.stationid AS stationId,
+          |    array_agg(DISTINCT os.organisationid) AS stationHolderIds
+          |  FROM organisation_station os, organisation o
+          |  WHERE os.organisationid=o.organisationid
+          |    AND os.roleid=100 /* code for station holder role */
+          |    AND os.totime IS NULL /* to get current station holder only */
+          |  GROUP BY os.stationid
+          |) t1
         """.stripMargin
       DB.withConnection("sources") { implicit connection =>
         SQL(query).as(parser *).toMap
@@ -277,22 +286,23 @@ class ProdSourceAccess extends SourceAccess {
           .as( parser * )
 
         val restricted = getRestrictedStations
-        val stationHolders = getStationHolders
+        val statHolders = getStationHolders
         val showType = !selectQ.contains("NULL AS type")
-        val showStatHolder = !selectQ.contains("NULL AS stationholder")
+        val showStatHolders = !selectQ.contains("NULL AS stationholder")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
-          .map(s => Try(stationHolders(s.id.get)) match { // insert any station holders
-            case Success(x) => s.copy(stationHolder = Some(x)) // set station holder
+          .map(s => Try(statHolders(s.id.get)) match { // insert any station holders
+            case Success(x) => s.copy(stationHolders = Some(x)) // set station holder
             case _ => s // leave unmodified
           })
           .filter(s => { // remove stations that don't match a specified station holder
-            stationHolder.isEmpty || (s.stationHolder.nonEmpty && s.stationHolder.get.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*")))
+            stationHolder.isEmpty ||
+              (s.stationHolders.nonEmpty && s.stationHolders.get.exists(x => x.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*"))))
           })
           .map(s => s.copy( // remove fields from output as required
             sType = if (showType) s.sType else None,
-            stationHolder = if (showStatHolder) s.stationHolder else None
+            stationHolders = if (showStatHolders) s.stationHolders else None
           ))
       }
     }
