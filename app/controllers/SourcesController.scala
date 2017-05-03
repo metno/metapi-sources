@@ -73,10 +73,10 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*in\\*d' would match 'Finland').",
               required = false)
               country: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'stationHolder' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*atens\\*vegves\\*' would match 'STATENS VEGVESEN').",
+    @ApiParam(value = "If specified, only sources whose 'stationHolders' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*atens\\*vegves\\*' would match 'STATENS VEGVESEN').",
               required = false)
               stationholder: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'externalId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*466' would match '01466').",
+    @ApiParam(value = "If specified, only sources whose 'externalIds' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*466' would match '01466').",
               required = false)
               externalid: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: id,country will show only those two entries in the data set.",
