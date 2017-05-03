@@ -41,5 +41,6 @@ abstract class SourceAccess {
     name: Option[String],
     country: Option[String],
     stationHolder: Option[String],
+    externalId: Option[String],
     fields: Set[String]): List[Source]
 }

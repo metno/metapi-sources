@@ -53,7 +53,7 @@ class ProdSourceAccess extends SourceAccess {
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
         "type", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
-        "municipalityid", "municipalityname", "countyid", "countyname", "stationholder")
+        "municipalityid", "municipalityname", "countyid", "countyname", "stationholders", "externalids")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(
@@ -139,6 +139,28 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
+    private def getExternalIds: Map[String, List[String]] = {
+      val parser: RowParser[(String, List[String])] = {
+        get[Option[String]]("stationId") ~
+          get[Option[List[String]]]("externalIds") map {
+          case stationId~externalIds => (stationId.get, externalIds.get)
+        }
+      }
+      val query =
+        """
+          |SELECT 'SN' || s.stationid AS stationId,
+          |  array_agg(DISTINCT ns.external_stationcode) AS externalIds
+          |FROM station s, network_station ns
+          |WHERE s.stationid=ns.stationid
+          |  AND ns.external_stationcode IS NOT NULL
+          |  AND ns.external_stationcode != ''
+          |GROUP BY s.stationid
+        """.stripMargin
+      DB.withConnection("sources") { implicit connection =>
+        SQL(query).as(parser *).toMap
+      }
+    }
+
     private val parser: RowParser[Source] = {
       get[Option[String]]("id") ~
         get[Option[String]]("name") ~
@@ -175,7 +197,8 @@ class ProdSourceAccess extends SourceAccess {
             munname,
             cntid,
             cntname,
-            None // station holder - filled in later if applicable
+            None, // station holder - filled in later if applicable
+            None // external ID - filled in later if applicable
           )
         }
       }
@@ -184,7 +207,7 @@ class ProdSourceAccess extends SourceAccess {
     // scalastyle:off method.length
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
-      country: Option[String], stationHolder: Option[String], fields: Set[String]): List[Source] = {
+      country: Option[String], stationHolder: Option[String], externalId: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
          NULL AS type,
@@ -202,7 +225,8 @@ class ProdSourceAccess extends SourceAccess {
          (CASE WHEN m.municipid = 0 THEN NULL ELSE m.name END) AS municipalityname,
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname,
-         NULL AS stationholder
+         NULL AS stationholders,
+         NULL AS externalids
       """
       val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
@@ -287,8 +311,10 @@ class ProdSourceAccess extends SourceAccess {
 
         val restricted = getRestrictedStations
         val statHolders = getStationHolders
+        val extIds = getExternalIds
         val showType = !selectQ.contains("NULL AS type")
-        val showStatHolders = !selectQ.contains("NULL AS stationholder")
+        val showStatHolders = !selectQ.contains("NULL AS stationholders")
+        val showExtIds = !selectQ.contains("NULL AS externalids")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
@@ -300,9 +326,18 @@ class ProdSourceAccess extends SourceAccess {
             stationHolder.isEmpty ||
               (s.stationHolders.nonEmpty && s.stationHolders.get.exists(x => x.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*"))))
           })
+          .map(s => Try(extIds(s.id.get)) match { // insert any external IDs
+            case Success(x) => s.copy(externalIds = Some(x)) // set external ID
+            case _ => s // leave unmodified
+          })
+          .filter(s => { // remove stations that don't match a specified external ID
+            externalId.isEmpty ||
+              (s.externalIds.nonEmpty && s.externalIds.get.exists(x => x.toLowerCase.matches(externalId.get.toLowerCase.replace("*", ".*"))))
+          })
           .map(s => s.copy( // remove fields from output as required
             sType = if (showType) s.sType else None,
-            stationHolders = if (showStatHolders) s.stationHolders else None
+            stationHolders = if (showStatHolders) s.stationHolders else None,
+            externalIds = if (showExtIds) s.externalIds else None
           ))
       }
     }
@@ -349,7 +384,8 @@ class ProdSourceAccess extends SourceAccess {
           None, // municipname n/a
           None, // countyid n/a
           None, // countyname n/a
-          None // stationHolder n/a
+          None, // stationHolders n/a
+          None // externalIds n/a
         ))
       } else {
         List[Source]()
@@ -360,12 +396,12 @@ class ProdSourceAccess extends SourceAccess {
 
   def getSources(
     srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String],
-    country: Option[String], stationHolder: Option[String], fields: Set[String]): List[Source] = {
+    country: Option[String], stationHolder: Option[String], externalId: Option[String], fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()
 
     if (srcSpec.includeStationSources) { // type 1
-      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, stationHolder, fields)
+      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, stationHolder, externalId, fields)
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2
