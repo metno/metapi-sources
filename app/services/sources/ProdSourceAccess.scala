@@ -53,7 +53,7 @@ class ProdSourceAccess extends SourceAccess {
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
         "type", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
-        "municipalityid", "municipalityname", "countyid", "countyname", "stationholders", "externalids")
+        "municipalityid", "municipalityname", "countyid", "countyname", "stationholders", "externalids", "icaocodes", "shipcodes")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(
@@ -139,7 +139,7 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
-    private def getExternalIds: Map[String, List[String]] = {
+    private def getExternalIds(networkId: Option[Int] = None): Map[String, List[String]] = {
       val parser: RowParser[(String, List[String])] = {
         get[Option[String]]("stationId") ~
           get[Option[List[String]]]("externalIds") map {
@@ -147,13 +147,14 @@ class ProdSourceAccess extends SourceAccess {
         }
       }
       val query =
-        """
+        s"""
           |SELECT 'SN' || s.stationid AS stationId,
           |  array_agg(DISTINCT ns.external_stationcode) AS externalIds
           |FROM station s, network_station ns
           |WHERE s.stationid=ns.stationid
           |  AND ns.external_stationcode IS NOT NULL
           |  AND ns.external_stationcode != ''
+          |  ${if (networkId.nonEmpty) s"AND ns.networkid=${networkId.get}" else ""}
           |GROUP BY s.stationid
         """.stripMargin
       DB.withConnection("sources") { implicit connection =>
@@ -197,8 +198,10 @@ class ProdSourceAccess extends SourceAccess {
             munname,
             cntid,
             cntname,
-            None, // station holder - filled in later if applicable
-            None // external ID - filled in later if applicable
+            None, // station holders - filled in later if applicable
+            None, // external IDs - ditto
+            None, // ICAO codes - ditto
+            None // ship codes - ditto
           )
         }
       }
@@ -207,7 +210,8 @@ class ProdSourceAccess extends SourceAccess {
     // scalastyle:off method.length
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
-      country: Option[String], stationHolder: Option[String], externalId: Option[String], fields: Set[String]): List[Source] = {
+      country: Option[String], stationHolder: Option[String], externalId: Option[String], icaoCode: Option[String], shipCode: Option[String],
+      fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
          NULL AS type,
@@ -226,7 +230,9 @@ class ProdSourceAccess extends SourceAccess {
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname,
          NULL AS stationholders,
-         NULL AS externalids
+         NULL AS externalids,
+         NULL AS icaocodes,
+         NULL AS shipcodes
       """
       val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
@@ -311,33 +317,62 @@ class ProdSourceAccess extends SourceAccess {
 
         val restricted = getRestrictedStations
         val statHolders = getStationHolders
-        val extIds = getExternalIds
+        val extIdsAll = getExternalIds()
+// scalastyle:off magic.number
+        val extIdsICAO = getExternalIds(Some(101)) // by definition
+        val extIdsShip = getExternalIds(Some(6)) // by definition
+// scalastyle:on magic.number
         val showType = !selectQ.contains("NULL AS type")
         val showStatHolders = !selectQ.contains("NULL AS stationholders")
-        val showExtIds = !selectQ.contains("NULL AS externalids")
+        val showExtIdsAll = !selectQ.contains("NULL AS externalids")
+        val showExtIdsICAO = !selectQ.contains("NULL AS icaocodes")
+        val showExtIdsShip = !selectQ.contains("NULL AS shipcodes")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
+          //
           .map(s => Try(statHolders(s.id.get)) match { // insert any station holders
-            case Success(x) => s.copy(stationHolders = Some(x)) // set station holder
+            case Success(x) => s.copy(stationHolders = Some(x)) // set station holders
             case _ => s // leave unmodified
           })
           .filter(s => { // remove stations that don't match a specified station holder
             stationHolder.isEmpty ||
               (s.stationHolders.nonEmpty && s.stationHolders.get.exists(x => x.toLowerCase.matches(stationHolder.get.toLowerCase.replace("*", ".*"))))
           })
-          .map(s => Try(extIds(s.id.get)) match { // insert any external IDs
-            case Success(x) => s.copy(externalIds = Some(x)) // set external ID
+          //
+          .map(s => Try(extIdsAll(s.id.get)) match { // insert any external IDs
+            case Success(x) => s.copy(externalIds = Some(x)) // set external IDs
             case _ => s // leave unmodified
           })
           .filter(s => { // remove stations that don't match a specified external ID
             externalId.isEmpty ||
               (s.externalIds.nonEmpty && s.externalIds.get.exists(x => x.toLowerCase.matches(externalId.get.toLowerCase.replace("*", ".*"))))
           })
+          //
+          .map(s => Try(extIdsICAO(s.id.get)) match { // insert any ICAO codes
+            case Success(x) => s.copy(icaoCodes = Some(x)) // set ICAO codes
+            case _ => s // leave unmodified
+          })
+          .filter(s => { // remove stations that don't match a specified ICAO code
+            icaoCode.isEmpty ||
+              (s.icaoCodes.nonEmpty && s.icaoCodes.get.exists(x => x.toLowerCase.matches(icaoCode.get.toLowerCase.replace("*", ".*"))))
+          })
+          //
+          .map(s => Try(extIdsShip(s.id.get)) match { // insert any ship codes
+            case Success(x) => s.copy(shipCodes = Some(x)) // set ship codes
+            case _ => s // leave unmodified
+          })
+          .filter(s => { // remove stations that don't match a specified ship code
+            shipCode.isEmpty ||
+              (s.shipCodes.nonEmpty && s.shipCodes.get.exists(x => x.toLowerCase.matches(shipCode.get.toLowerCase.replace("*", ".*"))))
+          })
+          //
           .map(s => s.copy( // remove fields from output as required
             sType = if (showType) s.sType else None,
             stationHolders = if (showStatHolders) s.stationHolders else None,
-            externalIds = if (showExtIds) s.externalIds else None
+            externalIds = if (showExtIdsAll) s.externalIds else None,
+            icaoCodes = if (showExtIdsICAO) s.icaoCodes else None,
+            shipCodes = if (showExtIdsShip) s.shipCodes else None
           ))
       }
     }
@@ -385,7 +420,9 @@ class ProdSourceAccess extends SourceAccess {
           None, // countyid n/a
           None, // countyname n/a
           None, // stationHolders n/a
-          None // externalIds n/a
+          None, // externalIds n/a
+          None, // icaoCodes n/a
+          None  // shipCodes n/a
         ))
       } else {
         List[Source]()
@@ -396,12 +433,13 @@ class ProdSourceAccess extends SourceAccess {
 
   def getSources(
     srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String],
-    country: Option[String], stationHolder: Option[String], externalId: Option[String], fields: Set[String]): List[Source] = {
+    country: Option[String], stationHolder: Option[String], externalId: Option[String], icaoCode: Option[String], shipCode: Option[String],
+    fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()
 
     if (srcSpec.includeStationSources) { // type 1
-      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, stationHolder, externalId, fields)
+      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, stationHolder, externalId, icaoCode, shipCode, fields)
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2

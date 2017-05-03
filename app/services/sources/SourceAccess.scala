@@ -42,5 +42,7 @@ abstract class SourceAccess {
     country: Option[String],
     stationHolder: Option[String],
     externalId: Option[String],
+    icaoCode: Option[String],
+    shipCode: Option[String],
     fields: Set[String]): List[Source]
 }

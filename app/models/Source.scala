@@ -69,5 +69,7 @@ case class Source(
   @(ApiModelProperty @field)(value="County id.", example="5") countyid: Option[Int],
   @(ApiModelProperty @field)(value="County name.", example="Oppland") countyname: Option[String],
   @(ApiModelProperty @field)(value="Station holders.", example="[ \"MET.NO\", \"STATENS VEGVESEN\" ]") stationHolders: Option[Seq[String]],
-  @(ApiModelProperty @field)(value="External ids.", example="[ \"01466\", \"10.249.0.126\", \"1466\", \"ENKJ\" ]") externalIds: Option[Seq[String]]
+  @(ApiModelProperty @field)(value="External ids.", example="[ \"01466\", \"10.249.0.126\", \"1466\", \"ENKJ\" ]") externalIds: Option[Seq[String]],
+  @(ApiModelProperty @field)(value="ICAO codes.", example="[ \"ESNZ\", \"ESPC\" ]") icaoCodes: Option[Seq[String]],
+  @(ApiModelProperty @field)(value="Ship codes.", example="[ \"JWBR\", \"LMXQ\" ]") shipCodes: Option[Seq[String]]
 )
