@@ -79,6 +79,9 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources whose 'municipality' or 'municipalityId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'li\\*eha\\*' would match 'Lillehammer').",
               required = false)
               municipality: Option[String],
+    @ApiParam(value = "If specified, only sources whose 'wmoId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*49\\*' would match '1492').",
+              required = false)
+              wmoid: Option[String],
     @ApiParam(value = "If specified, only sources whose 'stationHolders' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*atens\\*vegves\\*' would match 'STATENS VEGVESEN').",
               required = false)
               stationholder: Option[String],
@@ -114,14 +117,14 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     Try {
       // ensure that the query string contains supported fields only
       QueryStringUtil.ensureSubset(
-        Set("ids", "types", "geometry", "validtime", "name", "country", "county", "municipality",
+        Set("ids", "types", "geometry", "validtime", "name", "country", "county", "municipality", "wmoid",
           "stationholder", "externalid", "icaocode", "shipcode", "fields"), request.queryString.keySet)
 
       val srcSpec = SourceSpecification(ids, types)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
 
       sourceAccess.getSources(
-        srcSpec, geometry, validtime, name, country, county, municipality, stationholder, externalid, icaocode, shipcode, fieldList)
+        srcSpec, geometry, validtime, name, country, county, municipality, wmoid, stationholder, externalid, icaocode, shipcode, fieldList)
 
     } match {
       case Success(data) =>

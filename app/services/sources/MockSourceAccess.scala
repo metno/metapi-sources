@@ -55,7 +55,7 @@ class MockSourceAccess extends SourceAccess {
 
   def getSources(
     srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String], country: Option[String],
-    county: Option[String], municipality: Option[String], stationHolder: Option[String], externalId: Option[String],
+    county: Option[String], municipality: Option[String], wmoId: Option[String], stationHolder: Option[String], externalId: Option[String],
     icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()

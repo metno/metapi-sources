@@ -42,6 +42,7 @@ abstract class SourceAccess {
     country: Option[String],
     county: Option[String],
     municipality: Option[String],
+    wmoId: Option[String],
     stationHolder: Option[String],
     externalId: Option[String],
     icaoCode: Option[String],

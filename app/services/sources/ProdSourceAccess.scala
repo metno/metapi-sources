@@ -210,8 +210,8 @@ class ProdSourceAccess extends SourceAccess {
     // scalastyle:off method.length
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
-      country: Option[String], county: Option[String], municipality: Option[String], stationHolder: Option[String], externalId: Option[String],
-      icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
+      country: Option[String], county: Option[String], municipality: Option[String], wmoId: Option[String], stationHolder: Option[String],
+      externalId: Option[String], icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
          NULL AS type,
@@ -331,6 +331,10 @@ class ProdSourceAccess extends SourceAccess {
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           //
+          .filter(s => { // remove stations that don't match a specified WMO ID
+            wmoId.isEmpty || s.wmoId.nonEmpty && s.wmoId.get.toString.matches(wmoId.get.toLowerCase.replace("*", ".*"))
+          })
+          //
           .filter(s => { // remove stations that don't match a specified county
             lazy val pattern: Option[String] = if (county.nonEmpty) Some(county.get.toLowerCase.replace("*", ".*")) else None
               pattern.isEmpty || {
@@ -449,14 +453,14 @@ class ProdSourceAccess extends SourceAccess {
 
   def getSources(
     srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String], country: Option[String],
-    county: Option[String], municipality: Option[String], stationHolder: Option[String], externalId: Option[String],
+    county: Option[String], municipality: Option[String], wmoId: Option[String], stationHolder: Option[String], externalId: Option[String],
     icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()
 
     if (srcSpec.includeStationSources) { // type 1
       sources = sources ++ STInfoSysExec(
-        srcSpec.stationNumbers, geometry, validTime, name, country, county, municipality, stationHolder, externalId, icaoCode, shipCode, fields)
+        srcSpec.stationNumbers, geometry, validTime, name, country, county, municipality, wmoId, stationHolder, externalId, icaoCode, shipCode, fields)
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2
