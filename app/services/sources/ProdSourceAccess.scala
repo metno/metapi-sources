@@ -52,8 +52,8 @@ class ProdSourceAccess extends SourceAccess {
 
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
-        "type", "name", "country", "countrycode", "wmoidentifier", "geometry", "level", "validfrom", "validto",
-        "municipalityid", "municipalityname", "countyid", "countyname", "stationholders", "externalids", "icaocodes", "shipcodes")
+        "type", "name", "country", "countrycode", "wmoid", "geometry", "level", "validfrom", "validto",
+        "county", "countyid", "municipality", "municipalityid", "stationholders", "externalids", "icaocodes", "shipcodes")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(

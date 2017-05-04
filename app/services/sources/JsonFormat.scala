@@ -47,7 +47,7 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ "name").writeNullable[String] and
     (JsPath \ "country").writeNullable[String] and
     (JsPath \ "countryCode").writeNullable[String] and
-    (JsPath \ "wmoIdentifier").writeNullable[Int] and
+    (JsPath \ "wmoId").writeNullable[Int] and
     (JsPath \ "geometry").writeNullable[Point] and
     (JsPath \ "levels").writeNullable[Seq[Level]] and
     (JsPath \ "validFrom").writeNullable[String] and
