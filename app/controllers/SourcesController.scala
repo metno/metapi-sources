@@ -73,6 +73,12 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*in\\*d' would match 'Finland').",
               required = false)
               country: Option[String],
+    @ApiParam(value = "If specified, only sources whose 'county' or 'countyId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*ppla\\*' would match 'Oppland').",
+              required = false)
+              county: Option[String],
+    @ApiParam(value = "If specified, only sources whose 'municipality' or 'municipalityId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'li\\*eha\\*' would match 'Lillehammer').",
+              required = false)
+              municipality: Option[String],
     @ApiParam(value = "If specified, only sources whose 'stationHolders' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*atens\\*vegves\\*' would match 'STATENS VEGVESEN').",
               required = false)
               stationholder: Option[String],
@@ -108,13 +114,14 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     Try {
       // ensure that the query string contains supported fields only
       QueryStringUtil.ensureSubset(
-        Set("ids", "types", "geometry", "validtime", "name", "country", "stationholder", "externalid", "icaocode", "shipcode",
-          "fields"), request.queryString.keySet)
+        Set("ids", "types", "geometry", "validtime", "name", "country", "county", "municipality",
+          "stationholder", "externalid", "icaocode", "shipcode", "fields"), request.queryString.keySet)
 
       val srcSpec = SourceSpecification(ids, types)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
 
-      sourceAccess.getSources(srcSpec, geometry, validtime, name, country, stationholder, externalid, icaocode, shipcode, fieldList)
+      sourceAccess.getSources(
+        srcSpec, geometry, validtime, name, country, county, municipality, stationholder, externalid, icaocode, shipcode, fieldList)
 
     } match {
       case Success(data) =>

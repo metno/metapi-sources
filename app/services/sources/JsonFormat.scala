@@ -52,10 +52,10 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ "levels").writeNullable[Seq[Level]] and
     (JsPath \ "validFrom").writeNullable[String] and
     (JsPath \ "validTo").writeNullable[String] and
-    (JsPath \ "municipalityId").writeNullable[Int] and
-    (JsPath \ "municipalityName").writeNullable[String] and
+    (JsPath \ "county").writeNullable[String] and
     (JsPath \ "countyId").writeNullable[Int] and
-    (JsPath \ "countyName").writeNullable[String] and
+    (JsPath \ "municipality").writeNullable[String] and
+    (JsPath \ "municipalityId").writeNullable[Int] and
     (JsPath \ "stationHolders").writeNullable[Seq[String]] and
     (JsPath \ "externalIds").writeNullable[Seq[String]] and
     (JsPath \ "icaoCodes").writeNullable[Seq[String]] and

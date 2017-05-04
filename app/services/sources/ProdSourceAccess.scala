@@ -167,20 +167,20 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[String]]("name") ~
         get[Option[String]]("country") ~
         get[Option[String]]("countryCode") ~
-        get[Option[Int]]("wmoidentifier") ~
+        get[Option[Int]]("wmoId") ~
         get[Option[Double]]("level") ~
         get[Option[Double]]("lat") ~
         get[Option[Double]]("lon") ~
         get[Option[String]]("validfrom") ~
         get[Option[String]]("validto") ~
         get[Option[Int]]("municipalityid") ~
-        get[Option[String]]("municipalityname") ~
+        get[Option[String]]("municipality") ~
         get[Option[Int]]("countyid") ~
-        get[Option[String]]("countyname") map {
-        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipalityname~countyid~countyname => {
+        get[Option[String]]("county") map {
+        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipality~countyid~county => {
           val (munid, munname, cntid, cntname) = municipalityid match {
             case Some(x) if x == 0 => (None, None, None, None)
-            case _ => (municipalityid, municipalityname, countyid, countyname)
+            case _ => (municipalityid, municipality, countyid, county)
           }
 
           Source(
@@ -194,10 +194,10 @@ class ProdSourceAccess extends SourceAccess {
             if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
             fromDate,
             toDate,
-            munid,
-            munname,
-            cntid,
             cntname,
+            cntid,
+            munname,
+            munid,
             None, // station holders - filled in later if applicable
             None, // external IDs - ditto
             None, // ICAO codes - ditto
@@ -210,8 +210,8 @@ class ProdSourceAccess extends SourceAccess {
     // scalastyle:off method.length
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
-      country: Option[String], stationHolder: Option[String], externalId: Option[String], icaoCode: Option[String], shipCode: Option[String],
-      fields: Set[String]): List[Source] = {
+      country: Option[String], county: Option[String], municipality: Option[String], stationHolder: Option[String], externalId: Option[String],
+      icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
          NULL AS type,
@@ -219,16 +219,16 @@ class ProdSourceAccess extends SourceAccess {
          s.name AS name,
          c.name AS country,
          c.alias AS countryCode,
-         wmono AS wmoidentifier,
+         wmono AS wmoid,
          hs AS level,
          lat,
          lon,
          TO_CHAR(s.fromtime, 'YYYY-MM-DD') AS validfrom,
          TO_CHAR(s.totime, 'YYYY-MM-DD') AS validto,
          m.municipid AS municipalityid,
-         (CASE WHEN m.municipid = 0 THEN NULL ELSE m.name END) AS municipalityname,
+         (CASE WHEN m.municipid = 0 THEN NULL ELSE m.name END) AS municipality,
          (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN m.municipid / 100 ELSE NULL END) AS countyid,
-         (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS countyname,
+         (CASE WHEN 0 < m.municipid AND m.municipid < 10000 THEN (SELECT name FROM municip WHERE municipid = m.municipid / 100) ELSE NULL END) AS county,
          NULL AS stationholders,
          NULL AS externalids,
          NULL AS icaocodes,
@@ -331,6 +331,22 @@ class ProdSourceAccess extends SourceAccess {
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           //
+          .filter(s => { // remove stations that don't match a specified county
+            lazy val pattern: Option[String] = if (county.nonEmpty) Some(county.get.toLowerCase.replace("*", ".*")) else None
+              pattern.isEmpty || {
+                (s.county.nonEmpty && s.county.get.toLowerCase.matches(pattern.get)) ||
+                (s.countyId.nonEmpty && s.countyId.get.toString.matches(pattern.get))
+              }
+          })
+          //
+          .filter(s => { // remove stations that don't match a specified municipality
+            lazy val pattern: Option[String] = if (municipality.nonEmpty) Some(municipality.get.toLowerCase.replace("*", ".*")) else None
+              pattern.isEmpty || {
+                (s.municipality.nonEmpty && s.municipality.get.toLowerCase.matches(pattern.get)) ||
+                (s.municipalityId.nonEmpty && s.municipalityId.get.toString.matches(pattern.get))
+              }
+          })
+          //
           .map(s => Try(statHolders(s.id.get)) match { // insert any station holders
             case Success(x) => s.copy(stationHolders = Some(x)) // set station holders
             case _ => s // leave unmodified
@@ -415,10 +431,10 @@ class ProdSourceAccess extends SourceAccess {
           None, // levels n/a
           Some(IDFGridConfig.validFrom),
           Some(IDFGridConfig.validTo),
-          None, // municipid n/a
-          None, // municipname n/a
-          None, // countyid n/a
           None, // countyname n/a
+          None, // countyid n/a
+          None, // municipname n/a
+          None, // municipid n/a
           None, // stationHolders n/a
           None, // externalIds n/a
           None, // icaoCodes n/a
@@ -432,14 +448,15 @@ class ProdSourceAccess extends SourceAccess {
 
 
   def getSources(
-    srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String],
-    country: Option[String], stationHolder: Option[String], externalId: Option[String], icaoCode: Option[String], shipCode: Option[String],
-    fields: Set[String]): List[Source] = {
+    srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String], country: Option[String],
+    county: Option[String], municipality: Option[String], stationHolder: Option[String], externalId: Option[String],
+    icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()
 
     if (srcSpec.includeStationSources) { // type 1
-      sources = sources ++ STInfoSysExec(srcSpec.stationNumbers, geometry, validTime, name, country, stationHolder, externalId, icaoCode, shipCode, fields)
+      sources = sources ++ STInfoSysExec(
+        srcSpec.stationNumbers, geometry, validTime, name, country, county, municipality, stationHolder, externalId, icaoCode, shipCode, fields)
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2

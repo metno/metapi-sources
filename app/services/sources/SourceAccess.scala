@@ -40,6 +40,8 @@ abstract class SourceAccess {
     validTime: Option[String],
     name: Option[String],
     country: Option[String],
+    county: Option[String],
+    municipality: Option[String],
     stationHolder: Option[String],
     externalId: Option[String],
     icaoCode: Option[String],
