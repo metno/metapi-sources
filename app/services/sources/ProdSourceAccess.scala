@@ -52,7 +52,7 @@ class ProdSourceAccess extends SourceAccess {
 
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
-        "type", "name", "country", "countrycode", "wmoid", "geometry", "level", "validfrom", "validto",
+        "type", "name", "shortname", "country", "countrycode", "wmoid", "geometry", "level", "validfrom", "validto",
         "county", "countyid", "municipality", "municipalityid", "stationholders", "externalids", "icaocodes", "shipcodes")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
@@ -165,6 +165,7 @@ class ProdSourceAccess extends SourceAccess {
     private val parser: RowParser[Source] = {
       get[Option[String]]("id") ~
         get[Option[String]]("name") ~
+        get[Option[String]]("shortName") ~
         get[Option[String]]("country") ~
         get[Option[String]]("countryCode") ~
         get[Option[Int]]("wmoId") ~
@@ -177,7 +178,7 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[String]]("municipality") ~
         get[Option[Int]]("countyid") ~
         get[Option[String]]("county") map {
-        case sourceid~name~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipality~countyid~county => {
+        case sourceid~name~shortName~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipality~countyid~county => {
           val (munid, munname, cntid, cntname) = municipalityid match {
             case Some(x) if x == 0 => (None, None, None, None)
             case _ => (municipalityid, municipality, countyid, county)
@@ -187,6 +188,7 @@ class ProdSourceAccess extends SourceAccess {
             Some("SensorSystem"),
             sourceid,
             name,
+            shortName,
             country,
             countryCode,
             wmono,
@@ -217,6 +219,7 @@ class ProdSourceAccess extends SourceAccess {
          NULL AS type,
          'SN'|| s.stationid AS id,
          s.name AS name,
+         s.short_name AS shortName,
          c.name AS country,
          c.alias AS countryCode,
          wmono AS wmoid,
@@ -428,6 +431,7 @@ class ProdSourceAccess extends SourceAccess {
           Some(IDFGridConfig.typeName),
           Some(IDFGridConfig.name),
           None, // name n/a
+          None, // shortName n/a
           None, // country n/a
           None, // countryCode n/a
           None, // WMO ID n/a

@@ -57,6 +57,7 @@ case class Source(
   @(ApiModelProperty @field)(name="@type", value="The source type of the Source.", example="SensorSystem") sType: Option[String],
   @(ApiModelProperty @field)(value="The MET API id of the source.", example="SN18700") id: Option[String],
   @(ApiModelProperty @field)(value="The name of the source.", example="OSLO - BLINDERN") name: Option[String],
+  @(ApiModelProperty @field)(value="The short name of the source.", example="Blindern") shortName: Option[String],
   @(ApiModelProperty @field)(value="The country affiliation of the source.", example="Norway") country: Option[String],
   @(ApiModelProperty @field)(value="The ISO 3166-1 alpha-2 code of the country.", example="NO") countryCode: Option[String],
   @(ApiModelProperty @field)(value="The assigned WMO number for a SensorSystem, if one exists.", example="1492") wmoId: Option[Int],
