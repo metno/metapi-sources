@@ -50,7 +50,7 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ "countryCode").writeNullable[String] and
     (JsPath \ "wmoId").writeNullable[Int] and
     (JsPath \ "geometry").writeNullable[Point] and
-    (JsPath \ "levels").writeNullable[Seq[Level]] and
+    (JsPath \ "masl").writeNullable[Double] and
     (JsPath \ "validFrom").writeNullable[String] and
     (JsPath \ "validTo").writeNullable[String] and
     (JsPath \ "county").writeNullable[String] and

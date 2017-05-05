@@ -169,7 +169,7 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[String]]("country") ~
         get[Option[String]]("countryCode") ~
         get[Option[Int]]("wmoId") ~
-        get[Option[Double]]("level") ~
+        get[Option[Double]]("masl") ~
         get[Option[Double]]("lat") ~
         get[Option[Double]]("lon") ~
         get[Option[String]]("validfrom") ~
@@ -178,7 +178,7 @@ class ProdSourceAccess extends SourceAccess {
         get[Option[String]]("municipality") ~
         get[Option[Int]]("countyid") ~
         get[Option[String]]("county") map {
-        case sourceid~name~shortName~country~countryCode~wmono~hs~lat~lon~fromDate~toDate~municipalityid~municipality~countyid~county => {
+        case sourceid~name~shortName~country~countryCode~wmono~masl~lat~lon~fromDate~toDate~municipalityid~municipality~countyid~county => {
           val (munid, munname, cntid, cntname) = municipalityid match {
             case Some(x) if x == 0 => (None, None, None, None)
             case _ => (municipalityid, municipality, countyid, county)
@@ -193,7 +193,7 @@ class ProdSourceAccess extends SourceAccess {
             countryCode,
             wmono,
             if (lon.isEmpty || lat.isEmpty) None else Some(Point(coordinates = Seq(lon.get, lat.get))),
-            if (hs.isEmpty) None else Some(Seq(Level(Some("height_above_ground"), hs, Some("m"), None))),
+            masl,
             fromDate,
             toDate,
             cntname,
@@ -223,7 +223,7 @@ class ProdSourceAccess extends SourceAccess {
          c.name AS country,
          c.alias AS countryCode,
          wmono AS wmoid,
-         hs AS level,
+         hs AS masl,
          lat,
          lon,
          TO_CHAR(s.fromtime, 'YYYY-MM-DD') AS validfrom,
