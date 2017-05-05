@@ -52,7 +52,7 @@ class ProdSourceAccess extends SourceAccess {
 
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
-        "type", "name", "shortname", "country", "countrycode", "wmoid", "geometry", "level", "validfrom", "validto",
+        "type", "name", "shortname", "country", "countrycode", "wmoid", "geometry", "masl", "validfrom", "validto",
         "county", "countyid", "municipality", "municipalityid", "stationholders", "externalids", "icaocodes", "shipcodes")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
@@ -436,7 +436,7 @@ class ProdSourceAccess extends SourceAccess {
           None, // countryCode n/a
           None, // WMO ID n/a
           None, // point n/a
-          None, // levels n/a
+          None, // masl n/a
           Some(IDFGridConfig.validFrom),
           Some(IDFGridConfig.validTo),
           None, // countyname n/a
