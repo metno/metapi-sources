@@ -67,31 +67,31 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources that have been, or still are, valid/applicable during some part of this interval may be included in the result. Specify &lt;date&gt;/&lt;date&gt;, &lt;date&gt;/now, &lt;date&gt;, or now, where &lt;date&gt; is of the form YYYY-MM-DD, e.g. 2017-03-06. The default is 'now', i.e. only currently valid/applicable sources are included.",
               required = false)
               validtime: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'name' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'li\\*eha\\*' would match 'Lillehammer').",
+    @ApiParam(value = "If specified, only sources whose 'name' attribute matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               name: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*in\\*d' would match 'Finland').",
+    @ApiParam(value = "If specified, only sources whose 'country' or 'countryCode' attribute matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               country: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'county' or 'countyId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*ppla\\*' would match 'Oppland').",
+    @ApiParam(value = "If specified, only sources whose 'county' or 'countyId' attribute matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               county: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'municipality' or 'municipalityId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'li\\*eha\\*' would match 'Lillehammer').",
+    @ApiParam(value = "If specified, only sources whose 'municipality' or 'municipalityId' attribute matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               municipality: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'wmoId' attribute matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*49\\*' would match '1492').",
+    @ApiParam(value = "If specified, only sources whose 'wmoId' attribute matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               wmoid: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'stationHolders' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*atens\\*vegves\\*' would match 'STATENS VEGVESEN').",
+    @ApiParam(value = "If specified, only sources whose 'stationHolders' attribute contains at least one name that matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               stationholder: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'externalIds' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. '\\*466' would match '01466').",
+    @ApiParam(value = "If specified, only sources whose 'externalIds' attribute contains at least one name that matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               externalid: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'icaoCodes' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'ENB\\*' would match 'ENBL' and 'ENBR'). Note that the ICAO code is just a special type of external ID.  Hence, searching for an ICAO code can also be done through the externalid parameter.",
+    @ApiParam(value = "If specified, only sources whose 'icaoCodes' attribute contains at least one name that matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               icaocode: Option[String],
-    @ApiParam(value = "If specified, only sources whose 'shipCodes' attribute contains at least one name that matches this filter may be included in the result. Optional wildcard asterisks may be specified (e.g. 'BU\\*1' would match 'BUOY1'). Note that the ship code is just a special type of external ID. Hence, searching for a ship code can also be done through the externalid parameter.",
+    @ApiParam(value = "If specified, only sources whose 'shipCodes' attribute contains at least one name that matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               shipcode: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: name,country will show only those two entries in the result in addition to the id which is always shown.",
