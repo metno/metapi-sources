@@ -127,9 +127,8 @@ class ProdSourceAccess extends SourceAccess {
           |FROM (
           |  SELECT os.stationid AS stationId,
           |    array_agg(DISTINCT os.organisationid) AS stationHolderIds
-          |  FROM organisation_station os, organisation o
-          |  WHERE os.organisationid=o.organisationid
-          |    AND os.roleid=100 /* code for station holder role */
+          |  FROM organisation_station os
+          |  WHERE os.roleid=100 /* code for station holder role */
           |    AND os.totime IS NULL /* to get current station holder only */
           |  GROUP BY os.stationid
           |) t1
