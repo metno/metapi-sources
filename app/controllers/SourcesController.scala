@@ -54,7 +54,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     new ApiResponse(code = 404, message = "No data was found for the list of query Ids."),
     new ApiResponse(code = 500, message = "Internal server error.")))
   def getSources( // scalastyle:ignore public.methods.have.type
-    @ApiParam(value = "The MET API source ID(s) that you want metadata for. Enter a comma-separated list to select multiple sources.",
+    @ApiParam(value = "The MET API source ID(s) that you want metadata for. Enter a comma-separated list to select multiple sources. Sources of type SensorSystem must be of the form SN&lt;int&gt; and may contain wildcards in the integer following 'SN' (e.g. SN18*7* matches both SN18700 and SN18007).",
               required = false)
               ids: Option[String],
     @ApiParam(value = "The type of MET API source that you want metadata for.",
