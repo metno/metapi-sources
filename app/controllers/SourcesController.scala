@@ -120,7 +120,7 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
         Set("ids", "types", "geometry", "validtime", "name", "country", "county", "municipality", "wmoid",
           "stationholder", "externalid", "icaocode", "shipcode", "fields"), request.queryString.keySet)
 
-      val srcSpec = SourceSpecification(ids, types)
+      val srcSpec = SourceSpecification(ids, types, true)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
 
       sourceAccess.getSources(
