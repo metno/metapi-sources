@@ -47,5 +47,6 @@ abstract class SourceAccess {
     externalId: Option[String],
     icaoCode: Option[String],
     shipCode: Option[String],
+    wigosId: Option[String],
     fields: Set[String]): List[Source]
 }

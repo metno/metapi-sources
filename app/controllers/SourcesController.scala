@@ -94,6 +94,9 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
     @ApiParam(value = "If specified, only sources whose 'shipCodes' attribute contains at least one name that matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
               required = false)
               shipcode: Option[String],
+    @ApiParam(value = "If specified, only sources whose 'wigosId' attribute matches this <a href=concepts#searchfilter>search filter</a> may be included in the result.",
+              required = false)
+              wigosid: Option[String],
     @ApiParam(value = "A comma-separated list of the fields that should be present in the response. If set, only those properties listed here will be visible in the result set; e.g.: name,country will show only those two entries in the result in addition to the id which is always shown.",
               required = false)
               fields: Option[String],
@@ -118,13 +121,13 @@ class SourcesController @Inject()(sourceAccess: SourceAccess) extends Controller
       // ensure that the query string contains supported fields only
       QueryStringUtil.ensureSubset(
         Set("ids", "types", "geometry", "validtime", "name", "country", "county", "municipality", "wmoid",
-          "stationholder", "externalid", "icaocode", "shipcode", "fields"), request.queryString.keySet)
+          "stationholder", "externalid", "icaocode", "shipcode", "wigosid", "fields"), request.queryString.keySet)
 
       val srcSpec = SourceSpecification(ids, types, true)
       val fieldList : Set[String] = FieldSpecification.parse(fields)
 
       sourceAccess.getSources(
-        srcSpec, geometry, validtime, name, country, county, municipality, wmoid, stationholder, externalid, icaocode, shipcode, fieldList)
+        srcSpec, geometry, validtime, name, country, county, municipality, wmoid, stationholder, externalid, icaocode, shipcode, wigosid, fieldList)
 
     } match {
       case Success(data) =>

@@ -53,7 +53,7 @@ class ProdSourceAccess extends SourceAccess {
     private def getSelectQuery(fields: Set[String]): String = {
       val legalFields = Set(
         "type", "name", "shortname", "country", "countrycode", "wmoid", "geometry", "masl", "validfrom", "validto",
-        "county", "countyid", "municipality", "municipalityid", "stationholders", "externalids", "icaocodes", "shipcodes")
+        "county", "countyid", "municipality", "municipalityid", "stationholders", "externalids", "icaocodes", "shipcodes", "wigosid")
       val illegalFields = fields -- legalFields
       if (illegalFields.nonEmpty) {
         throw new BadRequestException(
@@ -161,6 +161,19 @@ class ProdSourceAccess extends SourceAccess {
       }
     }
 
+    private def getWigosIds: Map[String, String] = {
+      val parser: RowParser[(String, String)] = {
+        get[String]("stationId") ~
+          get[String]("wigosId") map {
+          case stationId~wigosId => (stationId, wigosId)
+        }
+      }
+      val query = "SELECT 'SN' || stationid AS stationId, wigosid FROM wigos_station"
+      DB.withConnection("sources") { implicit connection =>
+        SQL(query).as(parser *).toMap
+      }
+    }
+
     private val parser: RowParser[Source] = {
       get[Option[String]]("id") ~
         get[Option[String]]("name") ~
@@ -202,7 +215,8 @@ class ProdSourceAccess extends SourceAccess {
             None, // station holders - filled in later if applicable
             None, // external IDs - ditto
             None, // ICAO codes - ditto
-            None // ship codes - ditto
+            None, // ship codes - ditto
+            None  // WIGOS ID - ditto
           )
         }
       }
@@ -212,7 +226,7 @@ class ProdSourceAccess extends SourceAccess {
     def apply(
       ids: Seq[String], geometry: Option[String], validTime: Option[String], name: Option[String],
       country: Option[String], county: Option[String], municipality: Option[String], wmoId: Option[String], stationHolder: Option[String],
-      externalId: Option[String], icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
+      externalId: Option[String], icaoCode: Option[String], shipCode: Option[String], wigosId: Option[String], fields: Set[String]): List[Source] = {
 
       val innerSelectQ = """
          NULL AS type,
@@ -234,7 +248,8 @@ class ProdSourceAccess extends SourceAccess {
          NULL AS stationholders,
          NULL AS externalids,
          NULL AS icaocodes,
-         NULL AS shipcodes
+         NULL AS shipcodes,
+         NULL AS wigosid
       """
       val selectQ = if (fields.isEmpty) "*" else getSelectQuery(fields)
 
@@ -324,11 +339,14 @@ class ProdSourceAccess extends SourceAccess {
         val extIdsICAO = getExternalIds(Some(101)) // by definition
         val extIdsShip = getExternalIds(Some(6)) // by definition
 // scalastyle:on magic.number
+        val wigosIds = getWigosIds
+
         val showType = !selectQ.contains("NULL AS type")
         val showStatHolders = !selectQ.contains("NULL AS stationholders")
         val showExtIdsAll = !selectQ.contains("NULL AS externalids")
         val showExtIdsICAO = !selectQ.contains("NULL AS icaocodes")
         val showExtIdsShip = !selectQ.contains("NULL AS shipcodes")
+        val showWigosId = !selectQ.contains("NULL AS wigosid")
 
         result
           .filter(s => !restricted(s.id.get)) // remove restricted stations
@@ -389,12 +407,21 @@ class ProdSourceAccess extends SourceAccess {
               (s.shipCodes.nonEmpty && s.shipCodes.get.exists(x => x.toLowerCase.matches(shipCode.get.toLowerCase.replace("*", ".*"))))
           })
           //
+          .map(s => Try(wigosIds(s.id.get)) match { // insert any WIGOS ID
+             case Success(x) => s.copy(wigosId = Some(x)) // set WIGOS ID
+             case _ => s // leave unmodified
+          })
+          .filter(s => { // remove stations that don't match a specified WIGOS ID
+            wigosId.isEmpty || (s.wigosId.nonEmpty && s.wigosId.get.toLowerCase.matches(wigosId.get.toLowerCase.replace("*", ".*")))
+          })
+          //
           .map(s => s.copy( // remove fields from output as required
             sType = if (showType) s.sType else None,
             stationHolders = if (showStatHolders) s.stationHolders else None,
             externalIds = if (showExtIdsAll) s.externalIds else None,
             icaoCodes = if (showExtIdsICAO) s.icaoCodes else None,
-            shipCodes = if (showExtIdsShip) s.shipCodes else None
+            shipCodes = if (showExtIdsShip) s.shipCodes else None,
+            wigosId = if (showWigosId) s.wigosId else None
           ))
       }
     }
@@ -445,7 +472,8 @@ class ProdSourceAccess extends SourceAccess {
           None, // stationHolders n/a
           None, // externalIds n/a
           None, // icaoCodes n/a
-          None  // shipCodes n/a
+          None, // shipCodes n/a
+          None  // WIGOS ID n/a
         ))
       } else {
         List[Source]()
@@ -457,13 +485,13 @@ class ProdSourceAccess extends SourceAccess {
   def getSources(
     srcSpec: SourceSpecification, geometry: Option[String], validTime: Option[String], name: Option[String], country: Option[String],
     county: Option[String], municipality: Option[String], wmoId: Option[String], stationHolder: Option[String], externalId: Option[String],
-    icaoCode: Option[String], shipCode: Option[String], fields: Set[String]): List[Source] = {
+    icaoCode: Option[String], shipCode: Option[String], wigosId: Option[String], fields: Set[String]): List[Source] = {
 
     var sources = List[Source]()
 
     if (srcSpec.includeStationSources) { // type 1
       sources = sources ++ STInfoSysExec(
-        srcSpec.stationNumbers, geometry, validTime, name, country, county, municipality, wmoId, stationHolder, externalId, icaoCode, shipCode, fields)
+        srcSpec.stationNumbers, geometry, validTime, name, country, county, municipality, wmoId, stationHolder, externalId, icaoCode, shipCode, wigosId, fields)
     }
 
     if (srcSpec.includeIdfGridSources && name.isEmpty && country.isEmpty) { // type 2

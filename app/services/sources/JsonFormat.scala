@@ -60,7 +60,8 @@ object JsonFormat extends BasicJsonFormat {
     (JsPath \ "stationHolders").writeNullable[Seq[String]] and
     (JsPath \ "externalIds").writeNullable[Seq[String]] and
     (JsPath \ "icaoCodes").writeNullable[Seq[String]] and
-    (JsPath \ "shipCodes").writeNullable[Seq[String]]
+    (JsPath \ "shipCodes").writeNullable[Seq[String]] and
+    (JsPath \ "wigosId").writeNullable[String]
   )(unlift(Source.unapply))
 
   implicit val sourceResponseWrites: Writes[SourceResponse] = (
