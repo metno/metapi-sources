@@ -352,7 +352,7 @@ class ProdSourceAccess extends SourceAccess {
           .filter(s => !restricted(s.id.get)) // remove restricted stations
           //
           .filter(s => { // remove stations that don't match a specified WMO ID
-            wmoId.isEmpty || s.wmoId.nonEmpty && s.wmoId.get.toString.matches(wmoId.get.toLowerCase.replace("*", ".*"))
+            wmoId.isEmpty || (s.wmoId.nonEmpty && s.wmoId.get.toString.matches(wmoId.get.toLowerCase.replace("*", ".*")))
           })
           //
           .filter(s => { // remove stations that don't match a specified county
